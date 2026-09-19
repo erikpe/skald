@@ -5,16 +5,15 @@ use super::{
 use crate::backend::graph::{LoweredBlockId, LoweredObjectId, LoweredValueId};
 use std::fmt::{self, Write};
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum LoweredFact<'a> {
     Value(LoweredValueId, &'a Value),
     Object(LoweredObjectId, &'a Object),
     Block(LoweredBlockId, &'a Block),
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl VerifiedCallable<'_> {
     /// Borrowed records cannot modify, certify or outlive this snapshot.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn visit<E>(
         &self,
         visitor: impl FnMut(LoweredFact<'_>) -> Result<(), E>,
@@ -123,7 +122,6 @@ fn render(draft: &CallableDraft<'_>, status: &str, out: &mut dyn Write) -> fmt::
     })
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl VerifiedProgram<'_> {
     /// Receipts describe closure without retaining or reconstructing released bodies.
     pub(in crate::backend) fn dump_inventory(&self, out: &mut dyn Write) -> fmt::Result {

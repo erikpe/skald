@@ -25,6 +25,7 @@ pub(in crate::backend) enum NativePilotError {
     Realization(RealizeError),
     Physical(PhysicalError),
     PhysicalProgram(PhysicalProgramError),
+    Observation(std::fmt::Error),
 }
 
 impl From<LowerError> for NativePilotError {
@@ -55,6 +56,7 @@ impl std::fmt::Display for NativePilotError {
             Self::PhysicalProgram(error) => {
                 write!(f, "native pilot program closure failed: {error}")
             }
+            Self::Observation(error) => write!(f, "native pilot observation failed: {error}"),
         }
     }
 }

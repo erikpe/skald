@@ -540,8 +540,9 @@ memory-read, call, report, trace-state and hard-trap effects and exact ABI/data
 associations. General native calls, entry and explicit TLS/trace memory selection
 are implemented; see [call and trace publication](X86_NATIVE_CONTRACTS.md#concrete-call-and-trace-publication).
 Shared indirect descriptors accept the target-defined early or late use timing;
-the native verifier requires a secured late target in R11. Physical execution
-remains planned.
+the native verifier requires a secured late target in R11. The private pilot
+executes both direct and secured indirect calls through verified physical code;
+full migration and production adoption remain planned.
 
 ## Consuming edits and snapshot analyses
 
@@ -618,10 +619,16 @@ reservations; it does not follow potentially invalid references or certify the
 result. Writers receive streaming text and errors propagate normally. These are
 private debugging APIs, not a stable external wire format or importer.
 
-Production phase events, public dump adapters and requested metrics remain
-pending until the native pipeline executes these phases. Current CLI dumps still
-observe the existing production compiler. No synthetic stage event, new CLI
-switch or native performance claim follows from model inspection.
+The private native pilot can stream independently requested lowered, selected,
+physical, placement and frame checkpoints from their verified owners. A quiet
+pilot supplies no writer and performs no rendering or observation bookkeeping.
+Writer failure stops the pilot before complete-program publication. Checkpoint
+text remains deterministic diagnostic output rather than a stable wire format.
+
+Production phase events, public dump adapters and requested metrics remain an
+LA05 obligation. Current CLI dumps still observe the existing production
+compiler. The private pilot fabricates no public stage event, adds no CLI switch
+and makes no native performance claim.
 
 ## Regression ownership
 

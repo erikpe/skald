@@ -221,6 +221,7 @@ pub(super) fn complete(
             .inspect(&mut again, super::super::Inspection::default())
             .unwrap();
         assert_eq!(quiet, again);
+        assert!(!quiet.contains("\nentry b"));
         assert!(!quiet.contains("\nframe bytes="));
         assert!(!quiet.contains("\nassignment "));
         let receipt: super::super::PhysicalReceipt<'_> = verified.receipt();
@@ -240,6 +241,7 @@ pub(super) fn complete(
             .inspect(
                 &mut observed,
                 super::super::Inspection {
+                    physical: true,
                     placement: true,
                     frame: true,
                 },

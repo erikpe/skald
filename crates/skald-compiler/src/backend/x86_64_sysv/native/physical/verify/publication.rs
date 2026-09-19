@@ -21,10 +21,10 @@ pub(in crate::backend) struct PhysicalReceipt<'p> {
 }
 #[derive(Clone, Copy, Default)]
 pub(in crate::backend) struct Inspection {
+    pub physical: bool,
     pub placement: bool,
     pub frame: bool,
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'a, 'f, 's, 'p> VerifiedPhysicalCallable<'a, 'f, 's, 'p> {
     pub(in crate::backend) fn receipt(&self) -> PhysicalReceipt<'p> {
         self.receipt.clone()
@@ -60,24 +60,26 @@ impl<'a, 'f, 's, 'p> VerifiedPhysicalCallable<'a, 'f, 's, 'p> {
             plan.runtime_trace(),
             plan.artifact_policy()
         )?;
-        writeln!(out, "entry b{}", self.draft.entry.0)?;
-        for block in &self.draft.blocks {
-            writeln!(out, "block b{} origin={:?}", block.id.0, block.origin)?;
-            for group in &block.groups {
-                writeln!(
-                    out,
-                    "group {:?} dependencies={:?}",
-                    group.origin, group.dependencies
-                )?;
-                for instruction in &group.instructions {
-                    write!(out, "  ")?;
-                    super::super::format::format_instruction(
+        if options.physical {
+            writeln!(out, "entry b{}", self.draft.entry.0)?;
+            for block in &self.draft.blocks {
+                writeln!(out, "block b{} origin={:?}", block.id.0, block.origin)?;
+                for group in &block.groups {
+                    writeln!(
                         out,
-                        instruction,
-                        |id| format!("{id:?}"),
-                        |id| format!("b{}", id.0),
+                        "group {:?} dependencies={:?}",
+                        group.origin, group.dependencies
                     )?;
-                    writeln!(out)?;
+                    for instruction in &group.instructions {
+                        write!(out, "  ")?;
+                        super::super::format::format_instruction(
+                            out,
+                            instruction,
+                            |id| format!("{id:?}"),
+                            |id| format!("b{}", id.0),
+                        )?;
+                        writeln!(out)?;
+                    }
                 }
             }
         }
@@ -122,6 +124,7 @@ impl<'a, 'f, 's, 'p> VerifiedPhysicalCallable<'a, 'f, 's, 'p> {
         Ok(())
     }
     /// Internal immutable visitor. Callbacks cannot change or acquire the draft.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn visit(&self, mut visitor: impl FnMut(PhysicalFact<'_>)) {
         visitor(PhysicalFact::Entry(self.draft.entry.0));
         for block in &self.draft.blocks {
@@ -146,7 +149,6 @@ pub(in crate::backend) enum PhysicalFact<'a> {
     Block(usize),
     Instruction(&'a Instruction),
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<'p> PhysicalReceipt<'p> {
     pub(in crate::backend) fn parent(&self) -> &SelectedReceipt<'p> {
         &self.parent
@@ -163,6 +165,7 @@ impl<'p> PhysicalReceipt<'p> {
     ) -> bool {
         self.same_snapshot(&product.receipt)
     }
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn require_parent(
         &self,
         parent: &SelectedReceipt<'p>,

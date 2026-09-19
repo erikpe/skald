@@ -12,12 +12,10 @@ use std::fmt::{self, Write};
 
 /// Required target formatting covers opcode distinctions and immediates absent
 /// from `describe`. Use deterministic scalar data, never Debug of a whole owner.
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) trait InspectPayload: Payload {
     fn fmt_opcode(&self, out: &mut dyn Write) -> fmt::Result;
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum SelectedFact<'a, P> {
     Entry {
         entry: Option<SelectedBlockId>,
@@ -75,7 +73,6 @@ impl<P> SelectedDraft<'_, P> {
     }
 }
 
-#[cfg_attr(not(test), allow(dead_code))]
 impl<P> VerifiedSelectedCallable<'_, P> {
     pub(in crate::backend) fn visit<'a, E>(
         &'a self,
@@ -84,7 +81,6 @@ impl<P> VerifiedSelectedCallable<'_, P> {
         visit(self.draft(), visitor)
     }
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl<P: InspectPayload> VerifiedSelectedCallable<'_, P> {
     pub(in crate::backend) fn dump(&self, out: &mut dyn Write) -> fmt::Result {
         render(self.draft(), "verified", out)?;
@@ -295,7 +291,6 @@ fn describe<P: InspectPayload>(payload: &P, out: &mut dyn Write) -> fmt::Result 
         d.abi_inputs, d.abi_results
     )
 }
-#[cfg_attr(not(test), allow(dead_code))]
 impl VerifiedSelectedProgram<'_> {
     pub(in crate::backend) fn dump_inventory(&self, out: &mut dyn Write) -> fmt::Result {
         writeln!(

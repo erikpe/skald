@@ -91,9 +91,10 @@ closure must still reconcile executable-pass parents and frozen data inventory
 before assembly publication.
 
 Immutable text inspection uses canonical identities, concrete instructions and
-group provenance. Placement assignments/transfers and frame regions appear only
-when explicitly requested; quiet checking does not collect dumps or access
-source services. An immutable visitor exposes entry, blocks and instructions.
+group provenance. Physical code, placement assignments/transfers and frame
+regions are three independent requests; an unrequested section is not rendered.
+Quiet checking does not collect dumps or access source services. An immutable
+visitor exposes entry, blocks and instructions.
 
 The target-owned formatter accepts one typed instruction and callbacks for
 artifact symbols and scoped block labels. A physical-program builder is its only
@@ -116,6 +117,10 @@ The private whole-program pilot consumes this closed product after mandatory
 selection, placement, frame and physical checks. Its native execution matrix
 covers default/minimal MIR schedules, both trace policies and complete/reachable
 artifact policies; scalar C probes exercise both call directions and integer/SIMD
-bank pressure. Receiver, hidden-result and alias-origin components remain native
+bank pressure. Hardening probes cover unordered floating predicates, upper-half
+unsigned conversions, signed minimum/floor division, complete-width shift checks,
+destructive live ties and values surviving caller clobbers. Requested checkpoints
+are deterministic across processes and observation failure cannot publish an
+artifact. Receiver, hidden-result and alias-origin components remain native
 phase fixtures because their source forms are deliberately outside admission.
 The ordinary backend remains unchanged until the separate adoption workstream.

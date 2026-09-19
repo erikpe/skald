@@ -1,9 +1,10 @@
 # Low-Level Compiler Migration Coverage
 
-Status: phase preparation and executable model complete, 2026-09-17.
+Status: phase preparation, executable model and private LA03 pilot complete,
+2026-09-19.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
-receipt fix and payload-contract/documentation changes. Production native
-construction, placement, adoption and allocation remain pending. Archived child
+receipt fix and payload-contract/documentation changes. Production full-language
+migration, adoption and allocation remain pending. Archived child
 roadmaps own validation history; this record owns current migration obligations.
 Program implementation baseline: `495debd3`.
 
@@ -90,6 +91,7 @@ Retain the semantic expectations while adapting owners during migration.
 | E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
 | E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
 | E21 | [Generated retain ABI probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/helpers/tests.rs): `generated_retain_helper_aligns_the_stack_before_reporting_exhaustion`; demonstrated the unaligned overflow reporter call before its correction |
+| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): `source_execution_matrix_covers_mir_trace_and_artifact_policies`, `adversarial_numeric_boundaries_execute_through_the_verified_path`, `full_width_shift_count_reports_before_native_cl_narrowing`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -102,7 +104,8 @@ Exact selected leaves and their mode coverage are recorded below.
 Inventory references G01–G05 identify the original readiness gaps, now all
 closed by E17/E19/E20 and the selected mode table. Retain those references to
 connect the audited families to their added protection; they do not mark
-pending current-behavior work. New-pipeline delivery remains pending separately.
+pending current-behavior work. Full-language new-pipeline delivery remains
+pending separately.
 
 ## MIR instruction inventory
 
@@ -319,7 +322,7 @@ equivalence evidence; it is not a hidden prerequisite for LA01.
 | Omitted tracing | Facade sources isolation and metadata early omission, E17/E16 | No action/record/lookup/metadata/TLS references; report selection cannot alter policy | Preparation guards, LA04 parity |
 | Call attribution: `SourceOperation`, `InheritedSourceOperation`, `SourceBodyFromOmittedHelper`, `NonReporting`, `HardDefectOnly`, `ProcessBoundary` | `lower/call/emission.rs`, E16 | Preserve attribution in lowered calls/actions. Current constructor audits it but discards the enum; do not treat physical `Call` as carrying that evidence today | LA02 metadata, LA04 lowering |
 | Backend planning visits | `planning.rs`, E15/E14 | Current callable phases: `ArrayLegality`, `Legality`, `RuntimeTraceActivation`, `Frame`, `InstructionSelection`; static phases: `Declared`, `Active`, `Initializer`, `Finalizer`, `ConservativeFallback`, `Retained`, `Emitted`. Future phase-local observers preserve exact domains without driving semantics | LA02/LA03 interfaces, LA05 observations |
-| Request-local reporting and dump inspection | `reporting`, driver orchestration, E18 | Typed new phase/events and immutable inspection adapters; dumps remain phase-owned; no timings in deterministic output; requested-only metrics | LA02/LA03 adapters, LA05 production |
+| Request-local reporting and dump inspection | `reporting`, driver orchestration, E18; private verified checkpoint adapters, E22 | Phase-owned lowered/selected/physical/placement/frame dumps stream only when privately requested; quiet mode has no renderer and observation failure prevents publication. LA05 must add typed public events/adapters and requested-only metrics without fabricated events or timings in deterministic output | LA03 private adapters complete; LA05 production |
 | Source diagnostics and driver failure categories | Driver/reporting contract, E18 | Source errors remain frontend-owned; structured backend errors retain target/callable context; no error hidden by filtering or fallback | LA03/LA04 integration |
 | Invalid generated product, target mismatch, stale placement | No current LIR equivalent | Private stage/origin/local-location invariant failure; verifier-owned seals; not a new source error or emitted runtime trap | LA02 virtual verification, LA03 placement/physical checks |
 
@@ -333,7 +336,8 @@ exist. Do not add public mutable products just for inspection.
 This table records responsibilities; names are conceptual, not new Rust types.
 Private checked construction and full lowered callable publication are implemented.
 Complete lowered-program closure and parent-bound target declarations are implemented.
-Selected authority and native consumption remain downstream work.
+Selected authority, checked placement/frame/physical publication and private
+native consumption are implemented for the admitted scalar surface.
 
 | Product | Producer and permitted inputs | Publication obligations | Consumer authority | Observation/error obligation | Implementation owner |
 | --- | --- | --- | --- | --- | --- |
@@ -341,7 +345,7 @@ Selected authority and native consumption remain downstream work.
 | Verified lowered LIR | Shared MIR/lifecycle/helper lowering plus checked plan | Closed callable CFG, single definitions/dominance/edge signatures, memory/effects/trace/artifact references; no opaque lifecycle operation or physical resource; final helper worklist before complete-program publication | Selection consumes immutable executable meaning without reading MIR; edits consume seal and reverify | Canonical dump, requested metrics, stage/origin verifier failure | LA02 schema/seals; LA03 pilot; LA04 full construction |
 | Verified selected LIR | Target selector plus lowered product and plan | All introduced CFG/calls/temporaries/clobbers/fixed/tied/resource constraints explicit; target/context bound; target-specific thunks equally verified | Placement consumes graph/operands/resources, no nominal source semantics | Canonical selected dump and target-selection/verification context | LA02 structural APIs; LA03 target schema/verifier |
 | Checked placement result | Baseline placer from exact selected callable and target resource descriptions | Independent legality/value-flow/transfer checking, exact snapshot binding, legal scratch/object/save requirements | Realization consumes placements and declared recipes; no reinterpretation of semantic operations | Placement dump, counts and stage/local-location defects | LA03 |
-| Verified physical code | Target realization from checked placement, frame requirements and target facts | No remaining virtual/frame references; legal instructions/offsets/edges, alignment/balance/saves and artifact references | Closure/rendering consume code/data references only; no selection, allocation or MIR queries | Frame/code metrics, encoding limits and physical verifier defects | LA03 pilot; LA04 full; LA05 integration |
+| Verified physical code | Target realization from checked placement, frame requirements and target facts | No remaining virtual/frame references; legal instructions/offsets/edges, alignment/balance/saves and artifact references | Closure/rendering consume code/data references only; no selection, allocation or MIR queries | Independently requested frame/code/placement checkpoints, encoding limits and physical verifier defects | LA03 pilot complete; LA04 full; LA05 integration |
 
 Analyses borrow exact immutable products or belong to phase-local sessions;
 mutation invalidates them. IDs alone do not certify freshness. Shared immutable
@@ -565,21 +569,40 @@ The [model/construction/verification design](../archive/LOW_LEVEL_IR_MODEL_DESIG
 is accepted, frozen and implemented. Its [archived roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md)
 records cumulative review and artifact-free validation. The
 [common readiness record](#common-model-readiness) and
-[retained artifacts](#retained-model-artifacts-and-removal-owners) are the current
-handoff for target selection and physical realization. Concrete native agreements
-remain pending before dependent implementation. The architecture program and
-cleanup audit's A22 remain in progress: private model delivery does not deliver
-production native lowering, placement, adoption or allocation.
+[retained artifacts](#retained-model-artifacts-and-removal-owners) remain the
+handoff through migration and adoption. The architecture program and cleanup
+audit's A22 remain in progress: the completed private scalar pilot does not
+deliver full-language production lowering, adoption or allocation.
 The [accepted, frozen native target design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
-and [active roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define the
-next pilot. The [owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
+and [active roadmap](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) define and
+implement the private pilot. The [owning model amendment](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md#accepted-streaming-publication-amendment)
 accepts plan-bound target catalogs and final exact-receipt reconciliation. The
 amendment is implemented in publication APIs: catalogs bind the checked plan,
 source selection requires genuine verified callables, and selected closure
 reconciles exact executable receipts against its borrowed finalized lower parent.
 Owner regressions cover body release before closure, discarded discovery authority,
-stale replacement, missing thunks and bound-parent edits. Concrete native
-orchestration and final physical publication remain pending.
+stale replacement, missing thunks and bound-parent edits. Native orchestration,
+checked placement/frame/physical publication and exact final closure are complete
+for the admitted scalar surface.
+
+The pilot hardening matrix crosses default/minimal MIR, enabled/omitted tracing
+and complete/reachable artifacts. Focused native cases cover all unordered NaN
+predicates, both upper-half unsigned float conversion directions, signed minimum
+division, negative floor quotient/remainder, original full-width shift counts,
+destructive live ties and values preserved across a seven-integer call; the C
+boundary also covers nine floating arguments and a nonzero outgoing frame area.
+Independent synthetic-target tests keep shared placement/frame contracts based on
+resource units, overlapping widths, partial preservation and link-role policy
+rather than x86 register names or frame layout.
+
+Requested lowered, selected, physical, placement and frame checkpoints are
+verified-owner output and deterministic both within and across processes. Quiet
+mode supplies no writer or renderer, and a writer failure prevents publication.
+A small all-checkpoint shift/call fixture produced 217,376 bytes of checkpoint
+text and 5,476 bytes of assembly (222,852 bytes combined), with 256-, 64- and
+48-byte frames. This is exploratory structural evidence only: it sets no format,
+size or performance threshold. LA05 should assess stage selection, streaming and
+possible presentation-layer deduplication when designing public adapters.
 
 Carry these accepted constraints into the native design:
 
@@ -603,9 +626,9 @@ Carry these accepted constraints into the native design:
 | Owner | Remaining deliverable / exit obligation |
 | --- | --- |
 | LA02 | Complete: checked declarations, full lowered vocabulary/verification/publication, program inventories/target extensions, selected structural and mandatory target verification, consuming edits, snapshot analysis and deterministic inspection; native obligations transferred above |
-| LA03 | Target resources and overlap/tie/operand timing, ABI plans and complete selection, parallel transfers, checked stack placement, symbolic frames and physical legalization; end-to-end scalar/control-flow/call pilot plus native x86 and synthetic AArch64 contract witnesses |
-| LA04 | Full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, I/O, traces, entry/statics and complete/reachable artifacts; update each inventory row with delivery evidence |
-| LA05 | One production LIR pipeline, reporting/determinism parity, legacy-path removal, portability/cumulative review and frozen foundation cost acceptance |
+| LA03 | Complete private scalar/control-flow/call pilot: target resources, selection, checked baseline placement, symbolic frames, physical verification/closure, hardened x86 execution and synthetic target contract witnesses. Its private gate and observation adapters transfer to LA05 |
+| LA04 | Full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, strings, I/O, aggregate calls/results, dispatch, generated helpers, entry/static initialization/shutdown and complete-mode inactive statics; update each inventory row with delivery evidence |
+| LA05 | One production LIR pipeline, public requested observations, reporting/determinism parity, private-gate and legacy-path removal, portability/cumulative review and frozen foundation cost acceptance; preserve all eleven inconclusive timing classifications until compatible paired captures resolve them |
 | LA06 | Separate allocation design, implementation/checking and measured adoption after foundation consolidation |
 
 Use the existing named witnesses, acceptance walkthroughs and future negative-test
@@ -746,5 +769,6 @@ drafts into immutable exact-parent publications after encoding, finite recipe,
 reference and CFG stack/preservation checks. Requested-only inspection and
 cloneable body-free receipts are implemented. Typed program closure retains those
 receipts and dependencies while storing callable text privately, then publishes
-assembly only after complete selected, data and fragment reconciliation. Native
-execution parity remains separate, with no production-adoption claim.
+assembly only after complete selected, data and fragment reconciliation. The
+private admitted scalar pilot supplies native execution parity for this surface;
+full-language parity and production adoption remain separate.

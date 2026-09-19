@@ -3,7 +3,7 @@ use crate::backend::plan::LirCallableId;
 use std::{
     collections::BTreeMap,
     fs, io,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -24,16 +24,27 @@ impl TempFragmentStore {
     #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn create() -> io::Result<Self> {
         static NEXT: AtomicU64 = AtomicU64::new(0);
-        let root = std::env::temp_dir().join(format!(
-            "skald-native-fragments-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        fs::create_dir(&root)?;
-        Ok(Self {
-            root,
-            files: BTreeMap::new(),
-        })
+        Self::create_in(&std::env::temp_dir(), std::process::id(), &NEXT)
+    }
+
+    pub(super) fn create_in(parent: &Path, process_id: u32, next: &AtomicU64) -> io::Result<Self> {
+        loop {
+            let root = parent.join(format!(
+                "skald-native-fragments-{}-{}",
+                process_id,
+                next.fetch_add(1, Ordering::Relaxed)
+            ));
+            match fs::create_dir(&root) {
+                Ok(()) => {
+                    return Ok(Self {
+                        root,
+                        files: BTreeMap::new(),
+                    });
+                }
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(error),
+            }
+        }
     }
 
     fn path(&self, key: LirCallableId) -> io::Result<PathBuf> {
