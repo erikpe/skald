@@ -262,6 +262,31 @@ fn primitive_and_shared_optionals_execute_through_the_verified_path() {
 }
 
 #[test]
+fn primitive_array_allocation_positions_and_length_execute_through_the_verified_path() {
+    let source = concat!(
+        "fn main()->i64{var values:i64[]=i64[](3u);",
+        "values[0]=4;values[-1]=8;",
+        "return (i64)values.len();}"
+    );
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, source);
+        let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true)
+            .unwrap_or_else(|error| panic!("{mode:?}: {error}"));
+        assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 3);
+    }
+}
+
+#[test]
+fn empty_inline_array_uses_its_null_representation_without_header_access() {
+    let fixture = fixture(
+        MirMode::Default,
+        "fn main()->i64{var values:i64[]=i64[]();return (i64)values.len();}",
+    );
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 0);
+}
+
+#[test]
 fn object_initialization_dispatch_and_checked_views_execute_through_the_verified_path() {
     let source = concat!(
         "interface Readable { fn read() -> i64; fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",

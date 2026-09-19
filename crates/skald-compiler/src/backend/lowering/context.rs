@@ -28,6 +28,8 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) object_origins: BTreeMap<StorageId, EntryObjectOrigin<'plan>>,
     pub(super) trace_record: Option<ObjectHandle<'plan>>,
     pub(super) guards: BTreeMap<BlockId, super::numeric::Guard>,
+    pub(super) array_backings: BTreeMap<StorageId, crate::mir::MirArrayOwnership>,
+    pub(super) array_status: BTreeMap<BlockId, ValueHandle<'plan>>,
 }
 
 #[derive(Clone, Copy)]
@@ -75,6 +77,23 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             builder.define_block(*block, &[])?;
         }
         builder.set_entry(blocks[definition.body().entry.index()])?;
+        let array_backings = definition
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .filter_map(|instruction| match instruction {
+                crate::mir::MirInstruction::Array(
+                    crate::mir::MirArrayInstruction::Allocate {
+                        backing, ownership, ..
+                    }
+                    | crate::mir::MirArrayInstruction::AllocateElements {
+                        backing, ownership, ..
+                    },
+                ) => Some((*backing, *ownership)),
+                _ => None,
+            })
+            .collect();
         let mut lowerer = Self {
             admitted,
             definition,
@@ -87,6 +106,8 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             object_origins: BTreeMap::new(),
             trace_record: None,
             guards: super::numeric::guards(definition)?,
+            array_backings,
+            array_status: BTreeMap::new(),
         };
         lowerer.declare_storage()?;
         lowerer.initialize_trace()?;

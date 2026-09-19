@@ -32,6 +32,11 @@ impl<'plan> Lowerer<'plan, '_> {
                 storage.kind,
                 crate::mir::MirStorageKind::SharedAllocation
                     | crate::mir::MirStorageKind::CheckedView(_)
+                    | crate::mir::MirStorageKind::ArrayBacking
+                    | crate::mir::MirStorageKind::ArrayProduced
+                    | crate::mir::MirStorageKind::ArraySlice
+                    | crate::mir::MirStorageKind::ArrayAnchor(_)
+                    | crate::mir::MirStorageKind::ArrayAlias(_)
             ) || matches!(storage.ty, MirType::Shared(_));
             let id = if address_carrier {
                 self.plan()
@@ -87,6 +92,11 @@ impl<'plan> Lowerer<'plan, '_> {
             storage.kind,
             crate::mir::MirStorageKind::SharedAllocation
                 | crate::mir::MirStorageKind::CheckedView(_)
+                | crate::mir::MirStorageKind::ArrayBacking
+                | crate::mir::MirStorageKind::ArrayProduced
+                | crate::mir::MirStorageKind::ArraySlice
+                | crate::mir::MirStorageKind::ArrayAnchor(_)
+                | crate::mir::MirStorageKind::ArrayAlias(_)
         ) || matches!(storage.ty, MirType::Shared(_))
         {
             return Ok(self.address_representation());

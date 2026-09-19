@@ -72,7 +72,7 @@ fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
 fn artifact_policy_cannot_hide_an_unsupported_retained_body() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "excluded.ska",
-        "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn dead(values: Item[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
     );
     for (input, body_must_identify_owner) in [
         (BackendInput::without_runtime_trace(&fixture.mir), false),
@@ -185,7 +185,7 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
 #[test]
 fn excluded_source_families_reject_before_plan_publication() {
     let sources = [
-        "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
+        "class Item { init() {} } fn dead(values: Item[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
     ];
     for source in sources {

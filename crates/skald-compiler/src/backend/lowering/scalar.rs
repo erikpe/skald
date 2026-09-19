@@ -79,6 +79,10 @@ impl<'plan> Lowerer<'plan, '_> {
                     )?;
                     return Ok(());
                 }
+                if let MirRvalueKind::ArrayLength { source, .. } = &assign.rvalue.kind {
+                    self.array_length(block, assign.result, source)?;
+                    return Ok(());
+                }
                 let operation = self.rvalue(block, &assign.rvalue.kind)?;
                 self.builder.append_into(
                     self.active_blocks[block.index()],
@@ -153,6 +157,7 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             MirInstruction::EndOptionalView(end) => self.end_optional_view(block, end)?,
             MirInstruction::EndOptionalBoxView(end) => self.end_optional_box_view(block, end)?,
+            MirInstruction::Array(instruction) => self.array_instruction(block, instruction)?,
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         Ok(())

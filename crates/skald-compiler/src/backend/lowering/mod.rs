@@ -1,5 +1,6 @@
 //! Shared final-MIR lowering. Target selection receives only verified products.
 
+mod array;
 mod calls;
 mod context;
 mod control;
@@ -9,6 +10,7 @@ mod entry;
 mod error;
 mod failure;
 mod generated;
+mod generated_array;
 mod generated_ownership;
 mod lifecycle;
 mod memory;

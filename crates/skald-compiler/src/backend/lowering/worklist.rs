@@ -27,6 +27,19 @@ pub(in crate::backend) fn lower_next<'plan>(
         {
             super::generated::lower_optional_box_finalizer(admitted, owner, key.layout)?
         }
+        LirCallableId::Helper(key)
+            if matches!(
+                key.family,
+                crate::backend::plan::HelperFamily::ArrayElementInitializer
+                    | crate::backend::plan::HelperFamily::ArrayElementCopier
+                    | crate::backend::plan::HelperFamily::ArrayClone
+                    | crate::backend::plan::HelperFamily::ArrayElementDestroyer
+                    | crate::backend::plan::HelperFamily::ArrayRelease
+                    | crate::backend::plan::HelperFamily::ArraySharedFinalizer
+            ) =>
+        {
+            super::generated_array::lower(admitted, owner, key)?
+        }
         LirCallableId::Helper(key) if key.family == crate::backend::plan::HelperFamily::Retain => {
             super::generated_ownership::lower_retain(admitted, owner)?
         }

@@ -219,10 +219,14 @@ LA03/LA04 implement their respective failure paths and LA05 checks complete pari
 
 ## Array and I/O suboperations
 
-All array rows are pending LA04 shared lowering; target layout/ordinary selection
-is pending LA03/LA04. `lower/array.rs` dispatches every member; specialized
-siblings own anchors, slices, shared elements and generated helpers. E09/E10
-are current evidence, with no additional preparation family gap identified.
+LM12 delivers checked storage, allocation, primitive initialization/assignment,
+publication, release, length, positions, ordinary loops, aliases and anchors for
+primitive/trivial inline and shared arrays. LM13 owns the remaining element
+lifecycle shapes and complete generated-helper closure; LM14 owns indexed
+construction and slices. `backend/lowering/array.rs` dispatches the source
+protocol and `backend/lowering/generated_array.rs` provides the currently
+admitted primitive/trivial helper bodies. E09/E10 remain the legacy parity
+oracle until the later rows close.
 
 | `MirArrayInstruction` members | Current specialized owner | Shared expansion invariant |
 | --- | --- | --- |
@@ -816,7 +820,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | Delivered by LM08 for class owners; wrapper/container owners reuse this core in LM10–LM14 |
 | Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | Delivered by LM10; aggregate/class/boxed guards remain LM11 |
 | Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | LM11 |
-| Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | LM12 |
+| Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | Delivered by LM12 for primitive/trivial inline, shared and optional-shared owners; indexed construction and slices remain LM14 |
 | Array copy/assignment/destruction and six generated array helper families | Element lifecycle facts plus canonical recursive helper declarations/dependencies | LM13 |
 | Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | LM14 |
 | String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | LM15 |

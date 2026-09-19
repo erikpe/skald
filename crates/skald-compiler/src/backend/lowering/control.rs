@@ -81,6 +81,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 ..
             } => return self.checked_shared_cast(block, cast, *success_target, *failure_target),
             optional if self.optional_terminator(block, optional)? => return Ok(()),
+            array if self.array_terminator(block, array)? => return Ok(()),
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         self.builder

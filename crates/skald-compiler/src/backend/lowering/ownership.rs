@@ -393,7 +393,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn runtime_call(
+    pub(super) fn runtime_call(
         &mut self,
         service: RuntimeService,
         arguments: Vec<CallArgument<crate::backend::lir::ValueHandle<'plan>>>,
@@ -447,7 +447,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn data_address(
+    pub(super) fn data_address(
         &mut self,
         block: BlockId,
         key: DataKey,
@@ -469,7 +469,7 @@ impl<'plan> Lowerer<'plan, '_> {
         self.byte_offset(block, handle, self.shared_header()?.header_size)
     }
 
-    fn load_at_offset(
+    pub(super) fn load_at_offset(
         &mut self,
         block: BlockId,
         base: crate::backend::lir::ValueHandle<'plan>,
@@ -486,7 +486,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )?[0])
     }
 
-    fn store_at_offset(
+    pub(super) fn store_at_offset(
         &mut self,
         block: BlockId,
         base: crate::backend::lir::ValueHandle<'plan>,
@@ -513,14 +513,16 @@ impl<'plan> Lowerer<'plan, '_> {
             .ok_or_else(|| PlanError::InvalidDomain.into())
     }
 
-    fn shared_header(&self) -> Result<crate::backend::plan::SharedHeaderLayout, LowerError> {
+    pub(super) fn shared_header(
+        &self,
+    ) -> Result<crate::backend::plan::SharedHeaderLayout, LowerError> {
         self.plan()
             .semantic()
             .shared_header
             .ok_or_else(|| PlanError::InvalidLayout.into())
     }
 
-    fn count_representation(&self) -> MemoryRepresentation {
+    pub(super) fn count_representation(&self) -> MemoryRepresentation {
         MemoryRepresentation {
             scalar: ScalarType::U64,
             bytes: 8,
@@ -550,7 +552,7 @@ impl<'plan> Lowerer<'plan, '_> {
         })
     }
 
-    fn append(
+    pub(super) fn append(
         &mut self,
         block: BlockId,
         operation: Operation<

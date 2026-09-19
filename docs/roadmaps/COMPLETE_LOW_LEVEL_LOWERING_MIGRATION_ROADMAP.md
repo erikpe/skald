@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM11 are complete and LM12 is next.
+Status: active; LM01–LM12 are complete and LM13 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -49,7 +49,7 @@ per-callable or per-operation fallback.
 - [x] LM09 — Checkpoint the aggregate and lifecycle core
 - [x] LM10 — Lower primitive and shared-owner optional behavior
 - [x] LM11 — Lower aggregate, class and boxed optional behavior
-- [ ] LM12 — Lower array storage, construction, positions and anchors
+- [x] LM12 — Lower array storage, construction, positions and anchors
 - [ ] LM13 — Lower array element lifecycle and generated helper families
 - [ ] LM14 — Lower indexed construction, slices and array aliases
 - [ ] LM15 — Lower strings, literal data and standard I/O
@@ -422,13 +422,13 @@ remain rejected until LM12–LM13 provide their storage and helper bodies.
 **Purpose:** establish array backing representation and safety control flow before
 element lifecycle and slices.
 
-- [ ] Lower checked allocation/size, inline/shared headers, descriptors,
+- [x] Lower checked allocation/size, inline/shared headers, descriptors,
   publication, adopt/replace/release and immutable length.
-- [ ] Lower position normalization, offsets, boundaries, bounds/operation checks
+- [x] Lower position normalization, offsets, boundaries, bounds/operation checks
   and forward/reverse array loops before element address use.
-- [ ] Lower anchor begin/end and alias binding for every inline/shared/optional
+- [x] Lower anchor begin/end and alias binding for every inline/shared/optional
   owner kind across replacement.
-- [ ] Preserve allocation-before-element failure order and initialized-prefix
+- [x] Preserve allocation-before-element failure order and initialized-prefix
   state without publishing partial storage.
 
 **Tests:** empty/boundary/overflow allocation, positive/negative positions,
@@ -436,6 +436,21 @@ anchor replacement, inline/shared backing, failure edges and loop CFG negatives.
 
 **Exit criteria:** safe array storage/addressing and all owner/anchor forms pass
 verification and native execution.
+
+Completed on 2026-09-19. Shared lowering now constructs inline and shared array
+backings from checked layout facts, initializes and publishes their headers only
+after successful allocation, and keeps the initialized prefix explicit. Array
+length, signed position normalization, boundary selection, operation checks,
+ordinary loops, aliases and every anchor ownership form lower to ordinary LIR
+CFG and address operations. Primitive/trivial arrays provide executable helper
+bodies so reachable programs close the exact callable worklist; LM13 retains
+ownership of the remaining element lifecycle shapes and complete-artifact
+admission. Focused lowering tests cover primitive and shared/optional-shared
+owners, positive and negative positions, loops and allocation rejection. The
+private native path exercises allocation, addressed stores, length observation
+and cleanup under both MIR schedules. Corrupt zero reference counts hard-trap
+instead of underflowing. The focused plan and lowering suites pass; the full
+repository gates are recorded with this implementation.
 
 ### LM13 — Lower array element lifecycle and generated helper families
 

@@ -439,7 +439,10 @@ fn finalizer_signature(
         .iter()
         .find_map(|fact| match fact.callable {
             crate::backend::plan::LirCallableId::Helper(key)
-                if key.family == HelperFamily::ClassFinalizer =>
+                if matches!(
+                    key.family,
+                    HelperFamily::ClassFinalizer | HelperFamily::ArraySharedFinalizer
+                ) =>
             {
                 Some(fact.callable)
             }

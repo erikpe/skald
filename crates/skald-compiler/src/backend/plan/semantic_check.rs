@@ -304,6 +304,9 @@ fn check_arrays(facts: &PlanFacts) -> Result<(), PlanError> {
             || type_layout(facts, SemanticType::Array(array.array))? != array.descriptor_layout
             || type_layout(facts, array.element)? != array.element_layout
             || array.stride == 0
+            || array.inline_owner_count_offset >= array.inline_length_offset
+            || array.inline_length_offset >= array.element_offset
+            || array.shared_length_offset >= array.shared_element_offset
         {
             return Err(PlanError::InvalidDomain);
         }

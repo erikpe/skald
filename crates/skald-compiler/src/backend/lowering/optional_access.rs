@@ -317,7 +317,7 @@ impl<'plan> Lowerer<'plan, '_> {
         self.store_optional_at(block, address, value, state_representation())
     }
 
-    fn constant_u64(
+    pub(super) fn constant_u64(
         &mut self,
         block: BlockId,
         value: u64,
@@ -327,7 +327,7 @@ impl<'plan> Lowerer<'plan, '_> {
             Operation::Constant(Constant::U64(value)),
         )?[0])
     }
-    fn compare(
+    pub(super) fn compare(
         &mut self,
         block: BlockId,
         predicate: PrimitiveComparisonPredicate,

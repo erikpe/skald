@@ -284,7 +284,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(handle)
     }
 
-    fn call_owner_helper_if_present(
+    pub(super) fn call_owner_helper_if_present(
         &mut self,
         block: BlockId,
         family: HelperFamily,
@@ -601,7 +601,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .append(block, Operation::ByteOffset { base, offset })?[0])
     }
 
-    fn address_at(
+    pub(super) fn address_at(
         &mut self,
         block: crate::backend::lir::BlockHandle<'plan>,
         storage: StorageId,

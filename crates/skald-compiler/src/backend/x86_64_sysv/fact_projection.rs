@@ -146,6 +146,12 @@ pub(in crate::backend) fn finish_semantic_projection(
                 descriptor_layout: layout_id(MirType::Array(array.id)),
                 element: semantic_type(array.element),
                 element_layout: layout_id(array.element),
+                inline_owner_count_offset: usize::try_from(super::layout::ARRAY_OWNER_COUNT_OFFSET)
+                    .expect("array owner-count offset is nonnegative"),
+                inline_length_offset: usize::try_from(super::layout::ARRAY_LENGTH_OFFSET)
+                    .expect("array length offset is nonnegative"),
+                shared_length_offset: usize::try_from(super::layout::SHARED_ARRAY_LENGTH_OFFSET)
+                    .expect("shared-array length offset is nonnegative"),
                 element_offset: target.element_offset(),
                 shared_element_offset: target.shared_element_offset(),
                 stride: target.stride(),

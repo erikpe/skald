@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     backend::{
-        lir::{AddressStride, MemoryRepresentation, Operation, ValueHandle},
+        lir::{BinaryOperation, Constant, MemoryRepresentation, Operation, ValueHandle},
         plan::{
             ArtifactId, DataKey, ObjectViewTarget, PlanError, ScalarType, SemanticType,
             SharedTarget,
@@ -22,7 +22,7 @@ impl<'plan> Lowerer<'plan, '_> {
         place: &MirPlace,
     ) -> Result<ValueHandle<'plan>, LowerError> {
         let (mut address, mut ty) = self.place_base(block, place.base)?;
-        for projection in &place.projections {
+        for (projection_index, projection) in place.projections.iter().enumerate() {
             let (offset, projected) = match *projection {
                 MirPlaceProjection::Base(class) => {
                     let SemanticType::Class(current) = ty else {
@@ -77,7 +77,18 @@ impl<'plan> Lowerer<'plan, '_> {
                         .semantic()
                         .array(array)
                         .ok_or(PlanError::UnknownDeclaration)?;
-                    address = self.byte_offset(block, address, fact.element_offset)?;
+                    let mut owner = place.clone();
+                    owner.projections.truncate(projection_index);
+                    let (backing, shared) = self.array_owner(block, &owner)?;
+                    address = self.byte_offset(
+                        block,
+                        backing,
+                        if shared {
+                            fact.shared_element_offset
+                        } else {
+                            fact.element_offset
+                        },
+                    )?;
                     let index_address = self.address(block, normalized_index)?;
                     let index = self.builder.append(
                         self.active_blocks[block.index()],
@@ -86,12 +97,23 @@ impl<'plan> Lowerer<'plan, '_> {
                             representation: self.representation(normalized_index)?,
                         },
                     )?[0];
+                    let stride = self.builder.append(
+                        self.active_blocks[block.index()],
+                        Operation::Constant(Constant::U64(fact.stride as u64)),
+                    )?[0];
+                    let offset = self.builder.append(
+                        self.active_blocks[block.index()],
+                        Operation::Binary {
+                            operation: BinaryOperation::Multiply,
+                            left: index,
+                            right: stride,
+                        },
+                    )?[0];
                     address = self.builder.append(
                         self.active_blocks[block.index()],
-                        Operation::ScaledIndex {
+                        Operation::ByteOffset {
                             base: address,
-                            index,
-                            stride: AddressStride::new(fact.stride, 1)?,
+                            offset,
                         },
                     )?[0];
                     ty = fact.element;
@@ -214,15 +236,21 @@ impl<'plan> Lowerer<'plan, '_> {
                 )?[0];
                 Ok((address, semantic_type(ty)))
             }
-            MirPlaceBase::Storage(storage)
-            | MirPlaceBase::AliasParameter(storage)
-            | MirPlaceBase::ArrayAlias(storage) => {
+            MirPlaceBase::Storage(storage) | MirPlaceBase::AliasParameter(storage) => {
                 let ty = self
                     .definition
                     .storage(storage)
                     .ok_or(PlanError::InvalidDomain)?
                     .ty;
                 Ok((self.address(block, storage)?, semantic_type(ty)))
+            }
+            MirPlaceBase::ArrayAlias(storage) => {
+                let ty = self
+                    .definition
+                    .storage(storage)
+                    .ok_or(PlanError::InvalidDomain)?
+                    .ty;
+                Ok((self.load_storage(block, storage)?, semantic_type(ty)))
             }
             MirPlaceBase::CheckedView(storage) => {
                 let ty = self

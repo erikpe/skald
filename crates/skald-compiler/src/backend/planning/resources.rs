@@ -263,6 +263,11 @@ fn declare_generated_resources(
         add_generated_dependency(
             facts,
             keys[&HelperFamily::ArrayClone],
+            ArtifactId::Callable(keys[&HelperFamily::ArrayClone]),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArrayClone],
             ArtifactId::Runtime(RuntimeService::Allocate),
         );
         add_generated_dependency(
@@ -273,12 +278,22 @@ fn declare_generated_resources(
         add_generated_dependency(
             facts,
             keys[&HelperFamily::ArrayRelease],
+            ArtifactId::Callable(keys[&HelperFamily::ArrayRelease]),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArrayRelease],
             ArtifactId::Runtime(RuntimeService::Free),
         );
         add_generated_dependency(
             facts,
             keys[&HelperFamily::ArraySharedFinalizer],
             ArtifactId::Callable(keys[&HelperFamily::ArrayElementDestroyer]),
+        );
+        add_generated_dependency(
+            facts,
+            keys[&HelperFamily::ArraySharedFinalizer],
+            ArtifactId::Callable(keys[&HelperFamily::ArraySharedFinalizer]),
         );
     }
     let (needs_retain, needs_release) = owner_helper_needs(input, &class_artifacts, facts);
@@ -751,6 +766,12 @@ fn owner_helper_needs(
             match instruction {
                 crate::mir::MirInstruction::SharedCopy(_)
                 | crate::mir::MirInstruction::SharedFieldCopy(_) => retain = true,
+                crate::mir::MirInstruction::Array(
+                    crate::mir::MirArrayInstruction::AnchorBegin {
+                        kind: crate::mir::MirArrayAnchorKind::InlineBacking,
+                        ..
+                    },
+                ) => retain = true,
                 crate::mir::MirInstruction::SharedCast(cast)
                     if cast.transfer == crate::mir::MirSharedCastTransfer::Copy =>
                 {

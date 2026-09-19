@@ -72,6 +72,12 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     | MirStorageKind::PathCondition
                     | MirStorageKind::NormalizedPathActivation
                     | MirStorageKind::OptionalUnwrap
+                    | MirStorageKind::ArrayBacking
+                    | MirStorageKind::ArrayProduced
+                    | MirStorageKind::ArraySlice
+                    | MirStorageKind::ArrayPosition
+                    | MirStorageKind::ArrayAnchor(_)
+                    | MirStorageKind::ArrayAlias(_)
             ) {
                 return Err(unsupported(
                     owner,
@@ -129,6 +135,11 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                             require_supported_optional_place(program, definition, source, owner)?;
                         }
                         MirRvalueKind::OptionalBoxPresence { .. } => {}
+                        MirRvalueKind::ArrayLength { source, array }
+                            if supported_array(program, *array) =>
+                        {
+                            place(source, owner)?;
+                        }
                         other => {
                             return Err(unsupported(owner, format!("unsupported rvalue {other:?}")))
                         }
@@ -235,7 +246,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     MirInstruction::SharedStatic(_) => {}
                     MirInstruction::SharedCopy(_) | MirInstruction::SharedMove(_) => {}
                     MirInstruction::SharedFieldCopy(copy) => place(&copy.source, owner)?,
-                    MirInstruction::SharedCast(cast) if supported_shared_cast(cast) => {
+                    MirInstruction::SharedCast(cast) if supported_shared_cast(program, cast) => {
                         shared_cast_source(&cast.source, owner)?;
                     }
                     MirInstruction::SharedRelease(_) => {}
@@ -273,21 +284,21 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     }
                     MirInstruction::OptionalSharedInitialize(initialize)
                         if supported_optional(program, initialize.optional)
-                            && supported_shared_target(initialize.target) =>
+                            && supported_shared_target(program, initialize.target) =>
                     {
                         place(&initialize.destination, owner)?;
                         optional_shared_source(&initialize.source, owner)?;
                     }
                     MirInstruction::OptionalSharedAssign(assign)
                         if supported_optional(program, assign.optional)
-                            && supported_shared_target(assign.target) =>
+                            && supported_shared_target(program, assign.target) =>
                     {
                         place(&assign.destination, owner)?;
                         optional_shared_source(&assign.source, owner)?;
                     }
                     MirInstruction::OptionalSharedCleanup(cleanup)
                         if supported_optional(program, cleanup.optional)
-                            && supported_shared_target(cleanup.target) =>
+                            && supported_shared_target(program, cleanup.target) =>
                     {
                         place(&cleanup.destination, owner)?;
                     }
@@ -344,6 +355,8 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         place(&end.source, owner)?;
                     }
                     MirInstruction::EndOptionalBoxView(_) => {}
+                    MirInstruction::Array(operation)
+                        if supported_array_instruction(program, operation, owner)? => {}
                     other => {
                         return Err(unsupported(
                             owner,
@@ -367,7 +380,11 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         | MirTerminationReason::PrimitiveCastOutOfRange
                         | MirTerminationReason::ObjectCastFailure
                         | MirTerminationReason::OptionalGuardOverflow
-                        | MirTerminationReason::OptionalPinnedMutation,
+                        | MirTerminationReason::OptionalPinnedMutation
+                        | MirTerminationReason::ArrayAllocationFailure
+                        | MirTerminationReason::ArrayIndexOutOfBounds
+                        | MirTerminationReason::ArrayInvalidSliceBounds
+                        | MirTerminationReason::ArraySliceLengthMismatch,
                     ..
                 } => {}
                 MirTerminator::CheckedCast { binding, .. } => {
@@ -376,7 +393,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 }
                 MirTerminator::ReturnShared { .. } => {}
                 MirTerminator::ReturnOptionalShared { .. } => {}
-                MirTerminator::SharedCast { cast, .. } if supported_shared_cast(cast) => {
+                MirTerminator::SharedCast { cast, .. } if supported_shared_cast(program, cast) => {
                     shared_cast_source(&cast.source, owner)?;
                 }
                 MirTerminator::OptionalUnwrap { source, .. } => {
@@ -385,7 +402,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 }
                 MirTerminator::OptionalSharedUnwrap { unwrap, .. }
                     if supported_optional(program, unwrap.optional)
-                        && supported_shared_target(unwrap.target) =>
+                        && supported_shared_target(program, unwrap.target) =>
                 {
                     place(&unwrap.source, owner)?;
                 }
@@ -402,6 +419,12 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     place(source, owner)?;
                     require_supported_optional_place(program, definition, source, owner)?;
                 }
+                MirTerminator::ArrayPositionCheck { .. }
+                | MirTerminator::ArrayOperationCheck { .. } => {}
+                MirTerminator::ArrayLoop {
+                    kind: MirArrayLoopKind::Ordinary,
+                    ..
+                } => {}
                 other => {
                     return Err(unsupported(
                         owner,
@@ -558,23 +581,112 @@ fn supported_assignment_copy(
     true
 }
 
+fn supported_array(program: &MirProgram, array: crate::identity::ArrayTypeId) -> bool {
+    program.array_type(array).is_some_and(|array| {
+        matches!(
+            array.element,
+            MirType::I64 | MirType::U64 | MirType::U8 | MirType::Bool | MirType::F64
+        ) && array
+            .lifecycle
+            .default
+            .is_none_or(|operation| operation == MirArrayDefaultElement::Primitive)
+            && array
+                .lifecycle
+                .copy
+                .is_none_or(|operation| operation == MirArrayCopyElement::Primitive)
+            && array
+                .lifecycle
+                .assignment
+                .is_none_or(|operation| operation == MirArrayAssignElement::Primitive)
+            && array.lifecycle.destruction == MirArrayDestroyElement::Trivial
+    })
+}
+
+fn supported_array_instruction(
+    program: &MirProgram,
+    operation: &MirArrayInstruction,
+    owner: Option<CallableId>,
+) -> Result<bool, AdmissionError> {
+    let array = match operation {
+        MirArrayInstruction::Allocate { array, .. }
+        | MirArrayInstruction::AllocateElements { array, .. }
+        | MirArrayInstruction::PublishShared { array, .. }
+        | MirArrayInstruction::Adopt { array, .. }
+        | MirArrayInstruction::Replace { array, .. }
+        | MirArrayInstruction::Release { array, .. }
+        | MirArrayInstruction::AnchorBegin { array, .. }
+        | MirArrayInstruction::Normalize { array, .. }
+        | MirArrayInstruction::Offset { array, .. }
+        | MirArrayInstruction::Boundary { array, .. } => *array,
+        MirArrayInstruction::InitializeElement { backing, .. }
+        | MirArrayInstruction::InitializeNext { backing, .. } => {
+            let _ = backing;
+            return Ok(matches!(
+                operation,
+                MirArrayInstruction::InitializeElement { .. }
+                    | MirArrayInstruction::InitializeNext {
+                        operation: MirArrayDefaultElement::Primitive,
+                        ..
+                    }
+            ));
+        }
+        MirArrayInstruction::Publish { .. } | MirArrayInstruction::AnchorEnd { .. } => {
+            return Ok(true)
+        }
+        MirArrayInstruction::AliasBind { source, .. } => {
+            place(source, owner)?;
+            return Ok(true);
+        }
+        MirArrayInstruction::ElementAssign {
+            destination,
+            source,
+            operation: MirArrayAssignElement::Primitive,
+            ..
+        } => {
+            place(destination, owner)?;
+            place(source, owner)?;
+            return Ok(true);
+        }
+        _ => return Ok(false),
+    };
+    if !supported_array(program, array) {
+        return Ok(false);
+    }
+    match operation {
+        MirArrayInstruction::Adopt { destination, .. }
+        | MirArrayInstruction::Replace { destination, .. } => place(destination, owner)?,
+        MirArrayInstruction::Release { owner: place, .. }
+        | MirArrayInstruction::AnchorBegin { owner: place, .. }
+        | MirArrayInstruction::Normalize { owner: place, .. }
+        | MirArrayInstruction::Offset { owner: place, .. }
+        | MirArrayInstruction::Boundary { owner: place, .. } => self::place(place, owner)?,
+        MirArrayInstruction::AliasBind { source, .. } => place(source, owner)?,
+        _ => {}
+    }
+    Ok(true)
+}
+
 fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionError> {
     if matches!(place.base, MirPlaceBase::ArrayAlias(_)) {
         return Err(unsupported(
             owner,
-            "array-alias place before its binding owner",
+            "array-alias place before its LM14 execution owner",
         ));
     }
     Ok(())
 }
 
-fn supported_shared_cast(cast: &MirSharedCast) -> bool {
+fn supported_shared_cast(program: &MirProgram, cast: &MirSharedCast) -> bool {
+    let _ = program;
     !matches!(cast.target, MirSharedTarget::Array(_))
         && !matches!(cast.source.target(), MirSharedTarget::Array(_))
 }
 
-fn supported_shared_target(target: MirSharedTarget) -> bool {
-    !matches!(target, MirSharedTarget::Array(_))
+fn supported_shared_target(program: &MirProgram, target: MirSharedTarget) -> bool {
+    match target {
+        MirSharedTarget::Array(array) => supported_array(program, array),
+        _ => true,
+    }
 }
 
 fn supported_optional(program: &MirProgram, optional: crate::identity::OptionalTypeId) -> bool {
@@ -582,7 +694,7 @@ fn supported_optional(program: &MirProgram, optional: crate::identity::OptionalT
         .optional_type(optional)
         .is_some_and(|optional| match optional.storage {
             MirOptionalStorage::Scalar => optional.primitive().is_some(),
-            MirOptionalStorage::SharedOwner(target) => !matches!(target, MirSharedTarget::Array(_)),
+            MirOptionalStorage::SharedOwner(target) => supported_shared_target(program, target),
             MirOptionalStorage::InlineClass(_) => true,
             MirOptionalStorage::Nested(inner) => supported_optional(program, inner),
             MirOptionalStorage::InlineArray(_) => false,

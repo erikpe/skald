@@ -30,7 +30,14 @@ impl<'plan> Lowerer<'plan, '_> {
             MirTerminationReason::OptionalAccessFailure => FailureMessage::OptionalAccessFailure,
             MirTerminationReason::OptionalGuardOverflow => FailureMessage::OptionalGuardOverflow,
             MirTerminationReason::OptionalPinnedMutation => FailureMessage::OptionalPinnedMutation,
-            _ => return Err(PlanError::InvalidDomain.into()),
+            MirTerminationReason::ArrayAllocationFailure => FailureMessage::ArrayAllocationFailure,
+            MirTerminationReason::ArrayIndexOutOfBounds => FailureMessage::ArrayIndexOutOfBounds,
+            MirTerminationReason::ArrayInvalidSliceBounds => {
+                FailureMessage::ArrayInvalidSliceBounds
+            }
+            MirTerminationReason::ArraySliceLengthMismatch => {
+                FailureMessage::ArraySliceLengthMismatch
+            }
         };
         let target = ArtifactId::Runtime(RuntimeService::Panic);
         let signature = self
