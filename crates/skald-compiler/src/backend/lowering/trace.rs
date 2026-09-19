@@ -99,6 +99,31 @@ impl<'plan> Lowerer<'plan, '_> {
         };
         Ok(CallAttribution::SourceOperation { origin, location })
     }
+    pub(super) fn synthetic_attribution(
+        &mut self,
+        block: crate::backend::lir::BlockHandle<'plan>,
+        origin: Span,
+    ) -> Result<CallAttribution, LowerError> {
+        let location = if let Some(record) = self.trace_record {
+            let location = self.location(origin)?;
+            let site = TraceSite::Instruction {
+                block,
+                ordinal: self.builder.instruction_count(block)? + 1,
+            };
+            self.builder.append(
+                block,
+                Operation::Trace(TraceAction::ReplaceLocation {
+                    record,
+                    location,
+                    site,
+                }),
+            )?;
+            Some(location)
+        } else {
+            None
+        };
+        Ok(CallAttribution::SourceOperation { origin, location })
+    }
     pub(super) fn pop_trace(&mut self, block: BlockId) -> Result<(), LowerError> {
         if let Some(record) = self.trace_record {
             self.builder.append(

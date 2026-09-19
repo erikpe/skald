@@ -242,12 +242,8 @@ impl Instruction {
                 let message =
                     ArtifactId::Data(crate::backend::plan::DataKey::FailureMessage(reason));
                 let mut refs = vec![(panic, panic.category()), (message, message.category())];
-                if let crate::backend::lir::CallAttribution::SourceOperation {
-                    location: Some(location),
-                    ..
-                } = attribution
-                {
-                    refs.push((*location, location.category()));
+                if let Some(artifact) = super::calls::attribution_artifact(attribution) {
+                    refs.push((artifact, artifact.category()));
                 }
                 refs
             }

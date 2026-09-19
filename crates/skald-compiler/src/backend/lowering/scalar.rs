@@ -67,6 +67,28 @@ impl<'plan> Lowerer<'plan, '_> {
             MirInstruction::CopyAssign(copy) => self.copy_assign(block, copy)?,
             MirInstruction::BindCheckedView(binding) => self.bind_checked_view(block, binding)?,
             MirInstruction::EndCheckedView(_) => {}
+            MirInstruction::SharedAllocate(allocation) => {
+                self.shared_allocate(block, allocation)?
+            }
+            MirInstruction::SharedInitialize(initialize) => {
+                self.shared_initialize(block, initialize)?
+            }
+            MirInstruction::SharedPublish(publish) => self.shared_publish(block, publish)?,
+            MirInstruction::SharedStatic(static_owner) => {
+                self.shared_static(block, static_owner)?
+            }
+            MirInstruction::SharedAdopt(adopt) => self.shared_adopt(block, adopt)?,
+            MirInstruction::SharedCopy(copy) => self.shared_copy(block, copy)?,
+            MirInstruction::SharedFieldCopy(copy) => self.shared_field_copy(block, copy)?,
+            MirInstruction::SharedCast(cast) => self.shared_cast(block, cast)?,
+            MirInstruction::SharedMove(transfer) => self.shared_move(block, transfer)?,
+            MirInstruction::SharedRelease(release) => self.shared_release(block, release)?,
+            MirInstruction::SharedFieldInitialize(initialize) => {
+                self.shared_field_initialize(block, initialize)?
+            }
+            MirInstruction::SharedFieldReplace(replace) => {
+                self.shared_field_replace(block, replace)?
+            }
             _ => return Err(PlanError::InvalidDomain.into()),
         }
         Ok(())

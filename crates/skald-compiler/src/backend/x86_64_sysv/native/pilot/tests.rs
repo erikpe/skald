@@ -73,6 +73,15 @@ fn assert_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32) {
     assert!(output.stderr.is_empty(), "{output:?}");
 }
 
+fn assert_runtime_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32) {
+    let output = match trace {
+        RuntimeTracePolicy::Enabled => run_native_assembly_with_runtime_trace_probe(assembly),
+        RuntimeTracePolicy::Omitted => run_native_assembly_with_c_probe(assembly, ""),
+    };
+    assert_eq!(output.status.code(), Some(expected), "{output:?}");
+    assert!(output.stderr.is_empty(), "{output:?}");
+}
+
 #[test]
 fn source_execution_matrix_covers_mir_trace_and_artifact_policies() {
     let source = concat!(
@@ -526,6 +535,80 @@ fn class_copy_cleanup_and_nested_finalizers_execute_through_the_verified_path() 
             assert_exit(&assembly, trace, 126);
         }
     }
+}
+
+#[test]
+fn shared_owners_execute_allocation_transfer_fields_casts_and_finalization() {
+    let source = concat!(
+        "interface Readable { fn read()->i64; }",
+        "class Leaf implements Readable { value:i64; init(value:i64){self.value=value;} ",
+        "fn read()->i64{return self.value;} destroy {} }",
+        "class Holder { edge:shared Leaf; init(edge:shared Leaf){self.edge=edge;} ",
+        "mut fn replace(edge:shared Leaf)->unit{self.edge=edge;} }",
+        "fn forward(value:shared Leaf)->shared Leaf{return value;}",
+        "fn main()->i64{",
+        "var first:shared Leaf=new Leaf(7);",
+        "var copied:shared Leaf=first;",
+        "var moved:shared Leaf=forward(copied);",
+        "var holder:Holder=Holder(first);",
+        "holder.replace(holder.edge);",
+        "var erased:shared Obj=moved;",
+        "var readable:shared Readable=(shared Readable)erased;",
+        "return readable->read()+holder.edge->read();}",
+    );
+    for mode in [MirMode::Default, MirMode::Minimal] {
+        let fixture = fixture(mode, source);
+        for trace in [RuntimeTracePolicy::Enabled, RuntimeTracePolicy::Omitted] {
+            let assembly = compile(&fixture, trace, true)
+                .unwrap_or_else(|error| panic!("{mode:?}/{trace:?}: {error}"));
+            assert_runtime_exit(&assembly, trace, 14);
+        }
+    }
+}
+
+#[test]
+fn last_shared_owner_finalizes_once_before_releasing_the_original_allocation() {
+    let source = concat!(
+        "extern fn record(value:i64)->unit;extern fn observed()->i64;",
+        "class Leaf { value:i64; init(value:i64){self.value=value;} ",
+        "destroy {record(self.value);} }",
+        "fn main()->i64{{var first:shared Leaf=new Leaf(7);",
+        "var copy:shared Leaf=first;}return observed();}",
+    );
+    let fixture = fixture(MirMode::Default, source);
+    let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
+    let output = run_native_assembly_with_c_probe(
+        &assembly,
+        concat!(
+            "#include <stdint.h>\n",
+            "static int64_t value;\n",
+            "void record(int64_t next) { value = value * 10 + next; }\n",
+            "int64_t observed(void) { return value; }\n",
+        ),
+    );
+    assert_eq!(output.status.code(), Some(7), "{output:?}");
+    assert!(output.stderr.is_empty(), "{output:?}");
+}
+
+#[test]
+fn shared_finalizer_failure_preserves_source_attribution_and_stops_before_free() {
+    let source = concat!(
+        "class Bomb { value:i64; init(value:i64){self.value=value;} ",
+        "destroy {var zero:i64=self.value-self.value;self.value=self.value/zero;} }",
+        "fn main()->i64{var bomb:shared Bomb=new Bomb(7);return 0;}",
+    );
+    let fixture = fixture(MirMode::Default, source);
+    let assembly = compile(&fixture, RuntimeTracePolicy::Enabled, true).unwrap();
+    let output = run_native_assembly_with_runtime_trace_probe(&assembly);
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        stderr.contains("panic: integer division by zero"),
+        "{stderr}"
+    );
+    assert!(stderr.contains("Bomb.destroy"), "{stderr}");
+    assert!(stderr.contains("main::main"), "{stderr}");
+    assert!(!stderr.contains("Release"), "{stderr}");
 }
 
 #[test]

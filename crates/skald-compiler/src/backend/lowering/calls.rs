@@ -203,7 +203,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn argument_component(
+    pub(super) fn argument_component(
         &mut self,
         block: BlockId,
         arguments: &[MirArgument],
@@ -240,6 +240,18 @@ impl<'plan> Lowerer<'plan, '_> {
                 .metadata),
             _ => Err(PlanError::InvalidSignature.into()),
         }
+    }
+
+    pub(super) fn callable_signature(
+        &self,
+        target: LirCallableId,
+    ) -> Result<crate::backend::plan::SignatureId, LowerError> {
+        let artifact = ArtifactId::Callable(target);
+        Ok(self
+            .plan()
+            .artifact(self.plan().artifact_id(artifact)?, artifact.category())?
+            .signature
+            .ok_or(PlanError::InvalidSignature)?)
     }
 
     fn call_component(

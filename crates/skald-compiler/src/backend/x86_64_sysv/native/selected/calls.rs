@@ -61,13 +61,23 @@ impl NativeCall {
         if let CallTarget::Direct(target) = self.target {
             refs.push((target, target.category()));
         }
-        if let CallAttribution::SourceOperation {
-            location: Some(location),
-            ..
-        } = self.attribution
-        {
-            refs.push((location, location.category()));
+        if let Some(artifact) = attribution_artifact(&self.attribution) {
+            refs.push((artifact, artifact.category()));
         }
         refs
+    }
+}
+
+pub(super) fn attribution_artifact(attribution: &CallAttribution) -> Option<ArtifactId> {
+    match *attribution {
+        CallAttribution::SourceOperation {
+            location: Some(location),
+            ..
+        } => Some(location),
+        CallAttribution::InheritedOperation { boundary }
+        | CallAttribution::SourceBodyFromOmittedHelper { boundary } => {
+            Some(ArtifactId::Callable(boundary))
+        }
+        _ => None,
     }
 }

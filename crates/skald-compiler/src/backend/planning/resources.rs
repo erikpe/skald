@@ -281,6 +281,47 @@ fn declare_generated_resources(
             ArtifactId::Callable(keys[&HelperFamily::ArrayElementDestroyer]),
         );
     }
+    let (needs_retain, needs_release) = owner_helper_needs(input, &class_artifacts, facts);
+    if needs_retain || needs_release {
+        let layout = facts
+            .semantic
+            .shared_header
+            .ok_or(PlanError::InvalidLayout)?
+            .handle_layout;
+        if needs_retain {
+            let retain = declare_helper(
+                facts,
+                HelperFamily::Retain,
+                layout,
+                helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
+                BTreeSet::new(),
+            )?;
+            for dependency in [
+                ArtifactId::Callable(retain),
+                ArtifactId::Runtime(RuntimeService::Panic),
+                ArtifactId::Data(DataKey::FailureMessage(
+                    FailureMessage::OwnershipCountOverflow,
+                )),
+            ] {
+                add_generated_dependency(facts, retain, dependency);
+            }
+        }
+        if needs_release {
+            let release = declare_helper(
+                facts,
+                HelperFamily::Release,
+                layout,
+                helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
+                BTreeSet::new(),
+            )?;
+            for dependency in [
+                ArtifactId::Callable(release),
+                ArtifactId::Runtime(RuntimeService::Free),
+            ] {
+                add_generated_dependency(facts, release, dependency);
+            }
+        }
+    }
     let classes = facts
         .semantic
         .classes
@@ -334,6 +375,15 @@ fn declare_generated_resources(
                     HelperFamily::ClassFinalizer,
                     facts.semantic.classes[target.index()].complete_layout,
                 )?),
+                DestructionStepFact::SharedField(_) => ArtifactId::Callable(helper_for(
+                    facts,
+                    HelperFamily::Release,
+                    facts
+                        .semantic
+                        .shared_header
+                        .ok_or(PlanError::InvalidLayout)?
+                        .handle_layout,
+                )?),
                 _ => continue,
             };
             add_generated_dependency(facts, finalizer, dependency);
@@ -354,30 +404,7 @@ fn declare_generated_resources(
             ),
             BTreeSet::new(),
         )?;
-        let shared_layout = facts
-            .semantic
-            .layout(SemanticType::Shared(SharedTarget::Class(class.class)))
-            .unwrap_or(class.complete_layout);
-        let retain = declare_helper(
-            facts,
-            HelperFamily::Retain,
-            shared_layout,
-            helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
-            BTreeSet::new(),
-        )?;
-        let release = declare_helper(
-            facts,
-            HelperFamily::Release,
-            shared_layout,
-            helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
-            [
-                ArtifactId::Callable(finalizer),
-                ArtifactId::Runtime(RuntimeService::Free),
-            ]
-            .into_iter()
-            .collect(),
-        )?;
-        let _ = (copy, retain, release);
+        let _ = copy;
     }
     for optional_box in facts.semantic.optional_boxes.clone() {
         if input.reachable_artifacts_only()
@@ -402,25 +429,7 @@ fn declare_generated_resources(
             BTreeSet::new(),
         )?;
         let _ = allocation;
-        for family in [HelperFamily::Retain, HelperFamily::Release] {
-            let dependencies = if family == HelperFamily::Release {
-                [
-                    ArtifactId::Callable(finalizer),
-                    ArtifactId::Runtime(RuntimeService::Free),
-                ]
-                .into_iter()
-                .collect()
-            } else {
-                BTreeSet::new()
-            };
-            declare_helper(
-                facts,
-                family,
-                layout,
-                helper_signature(&[ScalarType::DataAddress], ReturnShape::Unit),
-                dependencies,
-            )?;
-        }
+        let _ = finalizer;
     }
     Ok(())
 }
@@ -644,6 +653,132 @@ fn required_class_artifacts(
         }
     }
     Ok(classes)
+}
+
+fn owner_helper_needs(
+    input: BackendInput<'_>,
+    classes: &BTreeSet<crate::identity::ClassId>,
+    facts: &PlanFacts,
+) -> (bool, bool) {
+    let reachable = if input.reachable_artifacts_only() {
+        input
+            .reachable_callables()
+            .iter()
+            .copied()
+            .collect::<BTreeSet<_>>()
+    } else {
+        input
+            .program()
+            .executable_definitions()
+            .map(|definition| definition.callable())
+            .collect()
+    };
+    let mut retain = false;
+    let mut release = classes.iter().any(|class| {
+        facts.semantic.class(*class).is_some_and(|class| {
+            class
+                .destruction
+                .iter()
+                .any(|step| matches!(step, DestructionStepFact::SharedField(_)))
+        })
+    });
+    for definition in input.program().executable_definitions() {
+        if !reachable.contains(&definition.callable()) {
+            continue;
+        }
+        for instruction in definition
+            .body()
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+        {
+            match instruction {
+                crate::mir::MirInstruction::SharedCopy(_)
+                | crate::mir::MirInstruction::SharedFieldCopy(_) => retain = true,
+                crate::mir::MirInstruction::SharedCast(cast)
+                    if cast.transfer == crate::mir::MirSharedCastTransfer::Copy =>
+                {
+                    retain = true
+                }
+                crate::mir::MirInstruction::SharedRelease(_)
+                | crate::mir::MirInstruction::SharedFieldReplace(_) => release = true,
+                crate::mir::MirInstruction::CopyConstruct(copy) => {
+                    retain |= constructor_copy_uses_shared(input.program(), copy.operation)
+                }
+                crate::mir::MirInstruction::CopyAssign(copy) => {
+                    let shared = assignment_copy_uses_shared(input.program(), copy.operation);
+                    retain |= shared;
+                    release |= shared;
+                }
+                _ => {}
+            }
+        }
+        for block in &definition.body().blocks {
+            if matches!(
+                block.terminator,
+                Some(crate::mir::MirTerminator::SharedCast {
+                    cast: crate::mir::MirSharedCast {
+                        transfer: crate::mir::MirSharedCastTransfer::Copy,
+                        ..
+                    },
+                    ..
+                })
+            ) {
+                retain = true;
+            }
+        }
+    }
+    (retain, release)
+}
+
+fn constructor_copy_uses_shared(
+    program: &MirProgram,
+    root: crate::mir::MirSelectedCopyOperation<crate::identity::CopyConstructorId>,
+) -> bool {
+    copy_uses_shared(program, root, |class| &class.copy_constructor)
+}
+
+fn assignment_copy_uses_shared(
+    program: &MirProgram,
+    root: crate::mir::MirSelectedCopyOperation<crate::identity::CopyAssignmentId>,
+) -> bool {
+    copy_uses_shared(program, root, |class| &class.copy_assignment)
+}
+
+fn copy_uses_shared<I: Copy>(
+    program: &MirProgram,
+    root: crate::mir::MirSelectedCopyOperation<I>,
+    capability: impl Fn(&crate::mir::MirClassDeclaration) -> &crate::mir::MirCopyCapability<I>,
+) -> bool
+where
+    crate::mir::MirSelectedCopyOperation<I>: Copy,
+{
+    let mut pending = vec![root];
+    while let Some(operation) = pending.pop() {
+        let class = match operation {
+            crate::mir::MirSelectedCopyOperation::User(_) => continue,
+            crate::mir::MirSelectedCopyOperation::Synthesized(class) => class,
+        };
+        let Some(class) = program.class(class) else {
+            continue;
+        };
+        let crate::mir::MirCopyCapability::Synthesized(copy) = capability(class) else {
+            continue;
+        };
+        if let Some(base) = copy.base {
+            pending.push(base.operation);
+        }
+        for field in &copy.fields {
+            match *field {
+                crate::mir::MirSynthesizedFieldCopy::Shared { .. } => return true,
+                crate::mir::MirSynthesizedFieldCopy::Class { operation, .. } => {
+                    pending.push(operation)
+                }
+                _ => {}
+            }
+        }
+    }
+    false
 }
 
 fn declare_literals(

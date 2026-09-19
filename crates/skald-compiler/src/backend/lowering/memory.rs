@@ -32,7 +32,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 storage.kind,
                 crate::mir::MirStorageKind::SharedAllocation
                     | crate::mir::MirStorageKind::CheckedView(_)
-            );
+            ) || matches!(storage.ty, MirType::Shared(_));
             let id = if address_carrier {
                 self.plan()
                     .semantic()
@@ -54,14 +54,14 @@ impl<'plan> Lowerer<'plan, '_> {
             } else {
                 LifetimeDisposition::WholeCallable
             };
-            let caller_addressed =
-                matches!(
-                    storage.kind,
-                    crate::mir::MirStorageKind::Return
-                        | crate::mir::MirStorageKind::Receiver
-                        | crate::mir::MirStorageKind::AliasParameter(_)
-                ) || (matches!(storage.kind, crate::mir::MirStorageKind::Parameter)
-                    && scalar_type(self.admitted, storage.ty).is_err());
+            let caller_addressed = matches!(
+                storage.kind,
+                crate::mir::MirStorageKind::Receiver
+                    | crate::mir::MirStorageKind::AliasParameter(_)
+            ) || (matches!(
+                storage.kind,
+                crate::mir::MirStorageKind::Return | crate::mir::MirStorageKind::Parameter
+            ) && scalar_type(self.admitted, storage.ty).is_err());
             self.objects.push(if caller_addressed {
                 None
             } else {
@@ -87,7 +87,8 @@ impl<'plan> Lowerer<'plan, '_> {
             storage.kind,
             crate::mir::MirStorageKind::SharedAllocation
                 | crate::mir::MirStorageKind::CheckedView(_)
-        ) {
+        ) || matches!(storage.ty, MirType::Shared(_))
+        {
             return Ok(self.address_representation());
         }
         let ty = storage.ty;

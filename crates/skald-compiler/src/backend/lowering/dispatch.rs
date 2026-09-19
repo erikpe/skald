@@ -119,7 +119,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn membership(
+    pub(super) fn membership(
         &mut self,
         block: BlockId,
         metadata: ValueHandle<'plan>,

@@ -37,6 +37,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 | BackendRequiredRuntimeEntity::ArrayLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalBoxLayout(_)
+                | BackendRequiredRuntimeEntity::LiteralBacking(_)
         ) {
             return Err(unsupported(
                 None,
@@ -61,6 +62,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     | MirStorageKind::Argument
                     | MirStorageKind::Temporary
                     | MirStorageKind::SharedAnchor
+                    | MirStorageKind::SharedAllocation
                     | MirStorageKind::ScalarSpill
                     | MirStorageKind::PrimitiveAlias
                     | MirStorageKind::CheckedView(_)
@@ -208,6 +210,34 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                         origin(&binding.view.origin, owner)?;
                     }
                     MirInstruction::EndCheckedView(_) => {}
+                    MirInstruction::SharedAllocate(allocation)
+                        if matches!(allocation.target, MirSharedAllocationTarget::Class(_)) =>
+                    {
+                        if let MirSharedAllocationMode::Copy { source } = &allocation.mode {
+                            place(source, owner)?;
+                        }
+                    }
+                    MirInstruction::SharedInitialize(initialize) => {
+                        let declaration = program
+                            .initializer(initialize.target)
+                            .expect("verified shared initializer declaration");
+                        signature_check(program, &declaration.parameters, MirType::Unit, owner)?;
+                        arguments(&initialize.arguments, owner)?;
+                    }
+                    MirInstruction::SharedPublish(_) | MirInstruction::SharedAdopt(_) => {}
+                    MirInstruction::SharedStatic(_) => {}
+                    MirInstruction::SharedCopy(_) | MirInstruction::SharedMove(_) => {}
+                    MirInstruction::SharedFieldCopy(copy) => place(&copy.source, owner)?,
+                    MirInstruction::SharedCast(cast) if supported_shared_cast(cast) => {
+                        shared_cast_source(&cast.source, owner)?;
+                    }
+                    MirInstruction::SharedRelease(_) => {}
+                    MirInstruction::SharedFieldInitialize(initialize) => {
+                        place(&initialize.destination, owner)?;
+                    }
+                    MirInstruction::SharedFieldReplace(replace) => {
+                        place(&replace.destination, owner)?;
+                    }
                     other => {
                         return Err(unsupported(
                             owner,
@@ -235,6 +265,10 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 MirTerminator::CheckedCast { binding, .. } => {
                     place(&binding.view.source, owner)?;
                     origin(&binding.view.origin, owner)?;
+                }
+                MirTerminator::ReturnShared { .. } => {}
+                MirTerminator::SharedCast { cast, .. } if supported_shared_cast(cast) => {
+                    shared_cast_source(&cast.source, owner)?;
                 }
                 other => {
                     return Err(unsupported(
@@ -264,7 +298,7 @@ fn supported_cleanup(program: &MirProgram, root: crate::identity::ClassId) -> bo
         };
         for step in &class.destruction.steps {
             match *step {
-                MirDestructionStep::UserBody(_) => {}
+                MirDestructionStep::UserBody(_) | MirDestructionStep::SharedField(_) => {}
                 MirDestructionStep::Base(base) => pending.push(base),
                 MirDestructionStep::Field(field) => match program
                     .class(field.class())
@@ -311,7 +345,8 @@ fn supported_constructor_copy(
                 }
                 for field in &copy.fields {
                     match *field {
-                        MirSynthesizedFieldCopy::Scalar { .. } => {}
+                        MirSynthesizedFieldCopy::Scalar { .. }
+                        | MirSynthesizedFieldCopy::Shared { .. } => {}
                         MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
                         _ => return false,
                     }
@@ -353,7 +388,8 @@ fn supported_assignment_copy(
                 }
                 for field in &copy.fields {
                     match *field {
-                        MirSynthesizedFieldCopy::Scalar { .. } => {}
+                        MirSynthesizedFieldCopy::Scalar { .. }
+                        | MirSynthesizedFieldCopy::Shared { .. } => {}
                         MirSynthesizedFieldCopy::Class { operation, .. } => pending.push(operation),
                         _ => return false,
                     }
@@ -373,6 +409,26 @@ fn place(place: &MirPlace, owner: Option<CallableId>) -> Result<(), AdmissionErr
         ));
     }
     Ok(())
+}
+
+fn supported_shared_cast(cast: &MirSharedCast) -> bool {
+    !matches!(
+        cast.target,
+        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_)
+    ) && !matches!(
+        cast.source.target(),
+        MirSharedTarget::Array(_) | MirSharedTarget::OptionalBox(_)
+    )
+}
+
+fn shared_cast_source(
+    source: &MirSharedCastSource,
+    owner: Option<CallableId>,
+) -> Result<(), AdmissionError> {
+    match source {
+        MirSharedCastSource::Owner { .. } => Ok(()),
+        MirSharedCastSource::Field { place: source, .. } => place(source, owner),
+    }
 }
 
 fn arguments(arguments: &[MirArgument], owner: Option<CallableId>) -> Result<(), AdmissionError> {

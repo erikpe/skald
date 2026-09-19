@@ -105,9 +105,9 @@ allowlist.
 Requesting reachable artifact emission does not remove unsupported bodies.
 Direct receiver-bearing bodies, aliases, complex places, aggregate parameters,
 initializers, runtime type tests, checked object views, virtual/interface
-dispatch, scalar/class user and synthesized copy, and class cleanup are
-eligible. Shared-owner lifecycle, optional/container lifecycle, I/O, string
-panic and statics still reject explicitly.
+dispatch, scalar/class/shared-field user and synthesized copy, class cleanup and
+shared class-owner lifecycle are eligible. Optional/container lifecycle, I/O,
+string initialization and statics still reject explicitly.
 Complete artifact emission also rejects declared families requiring unsupported
 generated lifecycle/metadata roots. Reachable emission uses certified runtime
 obligations; unused declarations do not acquire executable authority.
@@ -168,6 +168,16 @@ Copy construction and assignment similarly expand certified base/field plans;
 scalar fields use checked loads/stores and nested class fields reuse their
 selected operations. Full-expression cleanup consumes the MIR-recorded reverse
 completion order after results have been secured.
+Shared-owner storage uses the checked one-word handle layout for locals,
+parameters and direct results. Class allocation remains unpublished while its
+selected initializer runs; publication writes dynamic metadata before the first
+owner count. Copies and owner-producing casts call one generated retain helper,
+while releases and shared destruction steps call one generated release helper.
+These ordinary verified graphs trap null/zero states, preserve immortal counts,
+report retain exhaustion, and store zero before last-owner finalization. The
+release graph calls the metadata-selected finalizer with the payload address,
+then frees its unchanged entry handle after the visible call. Generated helper
+calls inherit their caller's source boundary and create no trace frame.
 The generated process entry owns no source frame: it calls the runtime ABI marker,
 then language main and returns main's exact scalar result. Admission excludes
 statics, so startup/shutdown coordinators remain absent rather than acquiring

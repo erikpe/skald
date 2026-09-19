@@ -83,11 +83,66 @@ pub(super) fn lower_class_finalizer<'plan>(
                 let address = byte_offset(&mut builder, entry, complete, base.offset)?;
                 call_finalizer(plan, &mut builder, entry, owner.key(), target, address)?;
             }
+            DestructionStepFact::SharedField(field) => {
+                let field = plan
+                    .semantic()
+                    .field(field)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                if !matches!(field.ty, crate::backend::plan::SemanticType::Shared(_)) {
+                    return Err(PlanError::InvalidDomain.into());
+                }
+                let address = byte_offset(&mut builder, entry, complete, field.offset)?;
+                let data = plan.profile().data_layout;
+                let handle = builder.append(
+                    entry,
+                    Operation::Load {
+                        address,
+                        representation: crate::backend::lir::MemoryRepresentation {
+                            scalar: ScalarType::DataAddress,
+                            bytes: data.pointer_bytes,
+                            alignment: data.pointer_alignment,
+                        },
+                    },
+                )?[0];
+                call_owner_helper(
+                    plan,
+                    &mut builder,
+                    entry,
+                    owner.key(),
+                    HelperFamily::Release,
+                    handle,
+                )?;
+            }
             _ => return Err(PlanError::InvalidDomain.into()),
         }
     }
     builder.terminate(entry, Terminator::Return(vec![]))?;
     crate::backend::lir::verify_callable(builder.finish()).map_err(LowerError::Verification)
+}
+
+fn call_owner_helper<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    boundary: LirCallableId,
+    family: HelperFamily,
+    handle: ValueHandle<'plan>,
+) -> Result<(), LowerError> {
+    let target = super::ownership::owner_helper(plan, family)?;
+    let signature = callable_signature(plan, target)?;
+    builder.append(
+        block,
+        Operation::Call(Call {
+            target: CallTarget::Direct(ArtifactId::Callable(target)),
+            signature,
+            arguments: vec![CallArgument {
+                role: ComponentRole::Parameter(0),
+                value: handle,
+            }],
+            attribution: CallAttribution::InheritedOperation { boundary },
+        }),
+    )?;
+    Ok(())
 }
 
 pub(super) fn class_helper(

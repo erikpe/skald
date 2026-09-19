@@ -22,6 +22,12 @@ pub(in crate::backend) fn lower_next<'plan>(
         {
             super::generated::lower_class_finalizer(admitted, owner, key.layout)?
         }
+        LirCallableId::Helper(key) if key.family == crate::backend::plan::HelperFamily::Retain => {
+            super::generated_ownership::lower_retain(admitted, owner)?
+        }
+        LirCallableId::Helper(key) if key.family == crate::backend::plan::HelperFamily::Release => {
+            super::generated_ownership::lower_release(admitted, owner)?
+        }
         _ => return Err(crate::backend::plan::PlanError::InvalidDomain.into()),
     };
     worklist.complete(&body, &body.receipt())?;

@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM07 are complete and LM08 is next.
+Status: active; LM01–LM08 are complete and LM09 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -45,7 +45,7 @@ per-callable or per-operation fallback.
 - [x] LM05 — Lower complex places and aggregate call boundaries
 - [x] LM06 — Lower dispatch, runtime type operations and object initialization
 - [x] LM07 — Lower copy, cleanup and complete-class finalization
-- [ ] LM08 — Lower shared ownership and generated owner helpers
+- [x] LM08 — Lower shared ownership and generated owner helpers
 - [ ] LM09 — Checkpoint the aggregate and lifecycle core
 - [ ] LM10 — Lower primitive and shared-owner optional behavior
 - [ ] LM11 — Lower aggregate, class and boxed optional behavior
@@ -284,13 +284,13 @@ and `make msrv-check` pass for the completed slice.
 **Purpose:** complete allocation, retain/transfer/release and shared-field
 semantics before recursive optional/array owners consume them.
 
-- [ ] Lower allocation, unpublished initialization, publication, adopt/move,
+- [x] Lower allocation, unpublished initialization, publication, adopt/move,
   static/immortal handles, casts, copies and field initialization/replacement.
-- [ ] Lower checked reference counts, null/zero hard defects, immortal no-ops,
+- [x] Lower checked reference counts, null/zero hard defects, immortal no-ops,
   overflow reporting and retain-before-release replacement.
-- [ ] Preserve the original allocation across last-owner finalization and free
+- [x] Preserve the original allocation across last-owner finalization and free
   it exactly once after visible call clobbers.
-- [ ] Generate retain/release helpers with exact signatures, attribution,
+- [x] Generate retain/release helpers with exact signatures, attribution,
   recursive dependencies and ordinary verification.
 
 **Tests:** count boundaries, self/reentrant replacement, allocation/finalizer
@@ -299,6 +299,22 @@ recursion/closure.
 
 **Exit criteria:** every shared instruction/terminator and helper row has native
 evidence, including the last-owner acceptance witness.
+
+Completed on 2026-09-19. Shared owners now use the checked one-word handle
+representation for local, parameter and result storage. Allocation,
+initialization, publication, transfers, static backing, field edges and checked
+owner casts lower to ordinary verified memory, calls and CFG. One generated
+retain/release pair owns the shared-header layout: null and zero states trap,
+immortal counts return unchanged, retain exhaustion reports the canonical
+failure, and last release stores zero before calling the dynamic finalizer and
+freeing the original header. Class finalizers now release shared fields through
+that same helper. Focused graph tests cover exact helper dependencies, count
+boundaries, inherited attribution, retain-before-release self assignment and
+original-header preservation. Native witnesses cover both MIR schedules and
+trace policies, field replacement and casts, one-time last-owner finalization,
+real runtime free and source-attributed finalizer failure.
+The complete repository gate, 650-case golden suite and Rust 1.82 MSRV check
+pass for the completed slice.
 
 ### LM09 — Checkpoint the aggregate and lifecycle core
 

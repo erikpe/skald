@@ -214,6 +214,12 @@ impl<'plan> Lowerer<'plan, '_> {
                     source.clone().project_field(field),
                     span,
                 ),
+            MirSynthesizedFieldCopy::Shared { field } => self.shared_field_construct(
+                block,
+                &destination.clone().project_field(field),
+                &source.clone().project_field(field),
+                span,
+            ),
             _ => Err(PlanError::InvalidDomain.into()),
         }
     }
@@ -237,6 +243,12 @@ impl<'plan> Lowerer<'plan, '_> {
                 operation,
                 destination.clone().project_field(field),
                 source.clone().project_field(field),
+                span,
+            ),
+            MirSynthesizedFieldCopy::Shared { field } => self.shared_field_assign(
+                block,
+                &destination.clone().project_field(field),
+                &source.clone().project_field(field),
                 span,
             ),
             _ => Err(PlanError::InvalidDomain.into()),
@@ -332,17 +344,5 @@ impl<'plan> Lowerer<'plan, '_> {
                 ty: ScalarType::DataAddress,
             },
         )?[0])
-    }
-
-    fn callable_signature(
-        &self,
-        target: LirCallableId,
-    ) -> Result<crate::backend::plan::SignatureId, LowerError> {
-        let artifact = ArtifactId::Callable(target);
-        Ok(self
-            .plan()
-            .artifact(self.plan().artifact_id(artifact)?, artifact.category())?
-            .signature
-            .ok_or(PlanError::InvalidSignature)?)
     }
 }

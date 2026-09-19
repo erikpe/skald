@@ -186,7 +186,6 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
 fn excluded_source_families_reject_before_plan_publication() {
     let sources = [
         "fn dead(values: i64[]) -> i64 { return 0; } fn main() -> i64 { return 0; }",
-        "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
     ];
     for source in sources {
@@ -201,6 +200,14 @@ fn excluded_source_families_reject_before_plan_publication() {
             assert!(!reason.reason.is_empty());
         }
     }
+
+    let shared = fixture("class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }");
+    assert!(matches!(
+        admit(BackendInput::without_runtime_trace(&shared.mir)),
+        Err(AdmissionError::Unsupported(_))
+    ));
+    admit(BackendInput::without_runtime_trace(&shared.mir).with_reachable_artifacts_only())
+        .expect("LM08 admits shared signatures in retained source bodies");
 
     let object = fixture("class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }");
     assert!(matches!(
