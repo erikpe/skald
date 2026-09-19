@@ -7,24 +7,24 @@ use crate::backend::{
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Register {
+pub(in crate::backend) enum Register {
     Gpr(Gpr),
     Xmm(u8),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Operand {
+pub(in crate::backend) enum Operand {
     Register(Register),
     Memory { base: Gpr, displacement: i32 },
     Immediate(u64),
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum MoveKind {
+pub(in crate::backend) enum MoveKind {
     Integer,
     Float,
     Bits,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Alu {
+pub(in crate::backend) enum Alu {
     Add,
     Subtract,
     Multiply,
@@ -34,18 +34,18 @@ pub(super) enum Alu {
     DivideFloat,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Unary {
+pub(in crate::backend) enum Unary {
     Negate,
     Complement,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Convert {
+pub(in crate::backend) enum Convert {
     ZeroExtend,
     SignedToFloat,
     TruncateFloat,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Condition {
+pub(in crate::backend) enum Condition {
     Equal,
     NotEqual,
     Less,
@@ -60,21 +60,21 @@ pub(super) enum Condition {
     NotParity,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum Shift {
+pub(in crate::backend) enum Shift {
     Left,
     ArithmeticRight,
     LogicalRight,
 }
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub(super) struct BlockId(pub usize);
+pub(in crate::backend) struct BlockId(pub usize);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum CallTarget {
+pub(in crate::backend) enum CallTarget {
     Direct(ArtifactId),
     Indirect(Register),
 }
 /// Closed physical instruction vocabulary: no values, objects, homes or string opcodes.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) enum Instruction {
+pub(in crate::backend) enum Instruction {
     Move {
         kind: MoveKind,
         bits: u16,
@@ -158,12 +158,9 @@ pub(super) enum Origin {
 }
 #[derive(Clone, Debug)]
 pub(super) struct Group {
-    #[cfg_attr(not(test), allow(dead_code))]
     pub origin: Origin,
-    #[cfg_attr(not(test), allow(dead_code))]
     pub instructions: Vec<Instruction>,
     /// Declared metadata dependencies, including zero-code attribution references.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub dependencies: Vec<ArtifactId>,
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -172,19 +169,16 @@ pub(super) enum BlockOrigin {
     Selected(SelectedBlockId),
     Forward { block: SelectedBlockId, slot: usize },
 }
+#[cfg_attr(test, derive(Clone))]
 pub(super) struct Block {
-    #[cfg_attr(not(test), allow(dead_code))]
     pub id: BlockId,
-    #[cfg_attr(not(test), allow(dead_code))]
     pub origin: BlockOrigin,
     pub groups: Vec<Group>,
 }
+#[cfg_attr(test, derive(Clone))]
 pub(in crate::backend) struct PhysicalDraft<'a, 'f, 's, 'p> {
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) frame: &'a FramePlan<'f, 's, 'p, SelectedInstruction>,
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) entry: BlockId,
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) blocks: Vec<Block>,
 }
 #[derive(Debug, Eq, PartialEq)]

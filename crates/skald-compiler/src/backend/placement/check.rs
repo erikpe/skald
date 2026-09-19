@@ -24,6 +24,13 @@ impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
     pub(in crate::backend) fn assignment(&self, assignment: Assignment) -> Option<Location> {
         self.draft.assignments.get(&assignment).copied()
     }
+    pub(in crate::backend) fn storages(&self) -> impl Iterator<Item = (StorageId, &Storage)> {
+        self.draft
+            .storage
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (StorageId(i), s))
+    }
     pub(in crate::backend) fn storage(&self) -> &[Storage] {
         &self.draft.storage
     }

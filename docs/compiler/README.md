@@ -10,8 +10,8 @@ forward instead of asking later phases to repeat source analysis.
 
 The private native pipeline now includes checked placement,
 [frame planning](FRAME_PLANNING.md) and typed
-[physical drafts](PHYSICAL_REALIZATION.md). Independent physical verification
-and whole-program native publication remain planned.
+[physical verification](PHYSICAL_REALIZATION.md). Whole-program native closure
+and assembly publication remain planned.
 
 ## Architecture principles
 

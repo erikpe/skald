@@ -57,12 +57,6 @@ impl Gpr {
             Self::Rbx | Self::Rbp | Self::Rsp | Self::R12 | Self::R13 | Self::R14 | Self::R15
         )
     }
-    #[cfg_attr(not(test), allow(dead_code))]
-    pub(in crate::backend) fn requires_rex(self, bits: u16) -> bool {
-        self as usize >= Self::R8 as usize
-            || bits == 64
-            || (bits == 8 && matches!(self, Self::Rsp | Self::Rbp | Self::Rsi | Self::Rdi))
-    }
 }
 
 /// Construction is checked and mutation stays private. Whole-register units

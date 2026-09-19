@@ -93,6 +93,12 @@ fn runtime_trace_attribution_routes_all_target_calls_through_the_audited_facade(
         // machine calls or perform source attribution.
         root.join("native/physical/recipes.rs"),
         root.join("native/physical/format.rs"),
+        // Physical verification inspects typed calls and checks finite recipes;
+        // comparison instructions are never emission or source attribution.
+        root.join("native/physical/verify/mod.rs"),
+        root.join("native/physical/verify/encoding.rs"),
+        root.join("native/physical/verify/recipes.rs"),
+        root.join("native/physical/verify/state.rs"),
     ];
     let mut pending = vec![root];
     let mut violations = Vec::new();

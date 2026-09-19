@@ -10,7 +10,11 @@ use crate::backend::{
     BackendInput,
 };
 
-fn complete(source: &str, trace: bool, mut check: impl FnMut(&PhysicalDraft<'_, '_, '_, '_>)) {
+pub(super) fn complete(
+    source: &str,
+    trace: bool,
+    mut check: impl FnMut(&PhysicalDraft<'_, '_, '_, '_>),
+) {
     let fixture = crate::test_support::lower_source_to_complete_final_mir_with_sources(
         "physical.ska",
         source,
@@ -89,8 +93,48 @@ fn complete(source: &str, trace: bool, mut check: impl FnMut(&PhysicalDraft<'_, 
                 }
             }
         }
-        assemble(&draft);
-        check(&draft);
+        let verified =
+            super::verify::check_native_physical(draft, &selected, &placement, &frame).unwrap();
+        assemble(&verified);
+        check(verified.body());
+        let mut quiet = String::new();
+        verified
+            .inspect(&mut quiet, super::super::Inspection::default())
+            .unwrap();
+        let mut again = String::new();
+        verified
+            .inspect(&mut again, super::super::Inspection::default())
+            .unwrap();
+        assert_eq!(quiet, again);
+        assert!(!quiet.contains("\nframe bytes="));
+        assert!(!quiet.contains("\nassignment "));
+        let receipt: super::super::PhysicalReceipt<'_> = verified.receipt();
+        assert!(receipt.parent().same_snapshot(&selected.receipt()));
+        let mut visits = 0;
+        verified.visit(|fact| match fact {
+            super::super::PhysicalFact::Entry(entry) => assert_eq!(entry, verified.body().entry.0),
+            super::super::PhysicalFact::Block(id) => assert!(id < verified.body().blocks.len()),
+            super::super::PhysicalFact::Instruction(instruction) => {
+                let _ = format!("{instruction:?}");
+                visits += 1;
+            }
+        });
+        assert!(visits > 0);
+        let mut observed = String::new();
+        verified
+            .inspect(
+                &mut observed,
+                super::super::Inspection {
+                    placement: true,
+                    frame: true,
+                },
+            )
+            .unwrap();
+        assert!(observed.contains("\nframe bytes="));
+        assert!(observed.contains("\nassignment "));
+        assert!(receipt.matches(&verified));
+        assert_eq!(receipt.require_parent(&selected.receipt()), Ok(()));
+        assert_eq!(receipt.references(), selected.receipt().references());
         let other = place_native_baseline(&selected).unwrap();
         assert_eq!(
             realize_native(&selected, &other, &frame).err(),
@@ -99,6 +143,14 @@ fn complete(source: &str, trace: bool, mut check: impl FnMut(&PhysicalDraft<'_, 
             ))
         );
         let another = select(&context, &lower).unwrap();
+        let stale = realize_native(&selected, &placement, &frame).unwrap();
+        assert_eq!(
+            super::verify::check_native_physical(stale, &another, &placement, &frame)
+                .err()
+                .unwrap()
+                .reason,
+            super::verify::Reason::Provenance
+        );
         assert_eq!(
             realize_native(&another, &placement, &frame).err(),
             Some(RealizeError::WrongSelected)
@@ -186,8 +238,9 @@ fn bounded_numeric_cells_and_trace_accesses_are_concrete() {
     }
 }
 
-// Draft formatting is a test-only encoding witness, never executable publication.
-fn assemble(draft: &PhysicalDraft<'_, '_, '_, '_>) {
+// Verified callable formatting is an encoding witness, not program publication.
+fn assemble(verified: &super::super::VerifiedPhysicalCallable<'_, '_, '_, '_>) {
+    let draft = verified.body();
     use std::collections::BTreeSet;
     use std::fmt::Write;
     let dependencies = draft

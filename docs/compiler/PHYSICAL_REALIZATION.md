@@ -35,8 +35,8 @@ recipes reject expansion beyond their declared step counts.
 
 Byte multiplication uses its declared widened integer scratch. Native scalar
 memory accesses retain the selected scalar width; wider narrow-scalar carriers
-are outside the current native selection contract. Floating constants and sign changes use declared integer
-scratch and bit transfers. Integer and floating predicates preserve their
+are outside the current native selection contract. Floating constants and sign
+changes use declared integer scratch and bit transfers. Integer and floating predicates preserve their
 selected signedness and parity rules; division and shifts use their fixed
 register contracts. TLS expands to the explicit local-exec address sequence.
 
@@ -56,16 +56,48 @@ for the authorities that precede realization.
 
 ## Verification and publication boundary
 
-A physical draft is not executable publication authority. Independent physical
-verification remains planned: it must check encodings, recipe derivation,
-actual dependencies, scratch footprints and CFG stack/save/return state.
-Whole-program closure must then reconcile the exact executable-pass receipts
-and catalog inventory before assembly publication.
+A physical draft is not executable publication authority. The independent target
+checker consumes it into an immutable `VerifiedPhysicalCallable` only after all
+of the following checks succeed:
+
+- Encoding rules cover every closed opcode, register bank, width, immediate,
+  memory form and local branch destination. GPR identities represent low-byte
+  views only, so conflicting high-byte/REX combinations cannot be constructed.
+  Typed displacement fields and checked frame access bounds remain mandatory.
+- Exact selected, placement and frame identities must match the draft's borrow
+  chain. Selected sites and successor occurrences account for every ordered
+  group, forwarding block, entry action and returning epilogue, exactly once.
+- A separate finite acceptance cursor checks each concrete recipe and transfer
+  against immutable selected facts, assigned operands/scratch and frame regions.
+  It does not call the realizer, its operand decoder or the formatter as an
+  oracle. Changes in valid recipes require corresponding independent acceptance
+  rules and adversarial tests; general instruction equivalence is not proved.
+- Actual relocation/call references must belong to their group's declared
+  dependencies, resolve in the frozen typed catalog and agree with the selected
+  site's metadata. Administrative groups cannot acquire new dependencies.
+- Reachable CFG state establishes FP and fixed body SP, protects the saved FP and
+  incoming return address, checks call alignment and restores the incoming
+  state at returns. Joins and loops require identical frame state. Original
+  callee-saved register bits propagate through full-width integer/SIMD copies
+  and frame storage; partial writes invalidate evidence. Calls discard evidence
+  in caller-clobbered registers, including all SysV XMM registers. A finite intersection analysis
+  converges before strict preservation replay, with checked work bounds.
+
+The verified product retains the exact authority borrow chain. Its cloneable
+receipt carries the exact selected parent, a distinct physical publication
+identity and typed reference inventory, without retaining instruction bodies.
+Equal-content re-verification creates a different publication. Whole-program
+closure must still reconcile executable-pass parents and frozen data inventory
+before assembly publication.
+
+Immutable text inspection uses canonical identities, concrete instructions and
+group provenance. Placement assignments/transfers and frame regions appear only
+when explicitly requested; quiet checking does not collect dumps or access
+source services. An immutable visitor exposes entry, blocks and instructions.
 
 The target-owned formatter accepts one typed instruction and callbacks for
 artifact symbols and scoped block labels. It has no callable/program emitter or
-public assembly entry. Owner-local tests format drafts solely as assembler
-encoding witnesses, alongside provenance, bounded-recipe and checked-placement
-fixtures. Assembler acceptance does not establish semantic execution, stack
-state or program closure. Those draft witnesses must use independently verified
-products when the physical checker is delivered.
+public assembly entry. Owner-local assembler witnesses now consume independently
+verified physical products. Assembler acceptance alone does not establish native
+semantic execution or complete program closure. The ordinary backend remains
+unchanged until the separate native pilot integration and adoption workstreams.

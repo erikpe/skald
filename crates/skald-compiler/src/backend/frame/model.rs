@@ -78,7 +78,10 @@ pub(in crate::backend) struct FramePlan<'f, 's, 'p, P> {
     pub(super) regions: BTreeMap<Key, Region>,
     pub(super) object_accesses: BTreeMap<(Site, SelectedObjectId), AddressRecipe>,
 }
-impl<P> FramePlan<'_, '_, '_, P> {
+impl<'f, 's, 'p, P> FramePlan<'f, 's, 'p, P> {
+    pub(in crate::backend) fn checked_placement(&self) -> &'f CheckedPlacement<'s, 'p, P> {
+        self.placement
+    }
     pub(in crate::backend) fn policy(&self) -> FramePolicy {
         self.policy
     }
@@ -86,7 +89,6 @@ impl<P> FramePlan<'_, '_, '_, P> {
     pub(in crate::backend) fn object(&self, object: SelectedObjectId) -> Option<Region> {
         self.regions.get(&Key::Object(object)).copied()
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn storage(
         &self,
         storage: crate::backend::placement::StorageId,
@@ -103,7 +105,6 @@ impl<P> FramePlan<'_, '_, '_, P> {
     pub(in crate::backend) fn bytes(&self) -> usize {
         self.bytes
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(in crate::backend) fn outgoing_bytes(&self) -> usize {
         self.outgoing_bytes
     }

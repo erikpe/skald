@@ -79,7 +79,9 @@ protocol actions. It cannot add homes, saves, address scratch, calls, traps or
 semantic control-flow edges. Object addresses and location offsets come from frame
 queries; generated prologue and epilogue actions retain typed frame provenance.
 
-Independent physical verification must establish these rules:
+Independent native [physical verification](PHYSICAL_REALIZATION.md) establishes
+the following rules for the supported SysV policy. Other target policies must
+provide their corresponding checker:
 
 - Entry establishes the declared header, FP and fixed body SP before local
   accesses. Native caller SP alignment and FP+8 return-address provenance remain
@@ -98,6 +100,6 @@ Independent physical verification must establish these rules:
 - Administrative forwarding blocks preserve frame state and retain the original
   selected edge/transfer provenance; they cannot invent an ABI transition.
 
-These are the acceptance rules for the forthcoming physical checker. The frame
+The independent native checker enforces these acceptance rules. The frame
 planner establishes layout and addressing requirements, not physical execution
 or CFG-state correctness.

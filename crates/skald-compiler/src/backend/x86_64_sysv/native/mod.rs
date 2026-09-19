@@ -12,7 +12,10 @@ pub(in crate::backend) use abi::{classify, AbiError, CallArity, ComponentAbi};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use frame::plan_native_frame;
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use physical::realize_native;
+pub(in crate::backend) use physical::{
+    check_native_physical, realize_native, Inspection, PhysicalFact, PhysicalReceipt,
+    VerifiedPhysicalCallable,
+};
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use placement::{check_native_placement, place_native_baseline};
 #[cfg_attr(not(test), allow(unused_imports))]

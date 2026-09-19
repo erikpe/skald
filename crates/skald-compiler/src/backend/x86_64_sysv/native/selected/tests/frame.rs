@@ -138,7 +138,13 @@ fn manual_native_callee_save_placement_gets_a_width_correct_frame() {
         assert_eq!(frame.bytes(), 16);
         assert_eq!(frame.storage(saved).unwrap().bytes, 8);
         assert_eq!(frame.storage(saved).unwrap().offset, -8);
-        crate::backend::x86_64_sysv::native::realize_native(&selected, &checked, &frame).unwrap();
+        let physical =
+            crate::backend::x86_64_sysv::native::realize_native(&selected, &checked, &frame)
+                .unwrap();
+        crate::backend::x86_64_sysv::native::check_native_physical(
+            physical, &selected, &checked, &frame,
+        )
+        .unwrap();
     });
 }
 #[test]

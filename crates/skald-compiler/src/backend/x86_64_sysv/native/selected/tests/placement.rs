@@ -90,8 +90,14 @@ fn native_register_placement_is_checked_against_canonical_target_facts() {
                 let frame =
                     crate::backend::x86_64_sysv::native::plan_native_frame(&checked).unwrap();
                 assert_eq!(frame.bytes(), 0);
-                crate::backend::x86_64_sysv::native::realize_native(&selected, &checked, &frame)
-                    .unwrap();
+                let physical = crate::backend::x86_64_sysv::native::realize_native(
+                    &selected, &checked, &frame,
+                )
+                .unwrap();
+                crate::backend::x86_64_sysv::native::check_native_physical(
+                    physical, &selected, &checked, &frame,
+                )
+                .unwrap();
             }
             Gpr::Rsp => assert_eq!(result.err().unwrap().reason, CheckReason::Reserved),
             Gpr::Rbx => assert_eq!(result.err().unwrap().reason, CheckReason::MissingValue),

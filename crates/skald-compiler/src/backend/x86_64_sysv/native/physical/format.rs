@@ -3,7 +3,6 @@ use super::model::*;
 use crate::backend::plan::ArtifactId;
 use std::fmt::{self, Write};
 
-#[cfg_attr(not(test), allow(dead_code))]
 pub(super) fn format_instruction(
     out: &mut dyn Write,
     instruction: &Instruction,

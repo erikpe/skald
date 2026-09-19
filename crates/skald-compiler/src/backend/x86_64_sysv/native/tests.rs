@@ -113,9 +113,6 @@ fn all_views_have_explicit_overlap_reservations_and_call_footprints() {
     assert_eq!(resources.gpr(Gpr::Rax, 128), Err(ResourceError::Width));
     assert_eq!(resources.xmm(16, 64), Err(ResourceError::Unknown));
     assert_eq!(resources.xmm(0, 256), Err(ResourceError::Width));
-    assert!(Gpr::Rsi.requires_rex(8));
-    assert!(Gpr::R8.requires_rex(32));
-    assert!(!Gpr::Rax.requires_rex(8));
     assert!(!catalog
         .overlaps(
             resources.gpr(Gpr::Rax, 64).unwrap(),

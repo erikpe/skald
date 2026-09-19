@@ -18,8 +18,8 @@ availability analysis and immutable checked-placement publication. Deterministic
 baseline placement with unique private homes and explicit parallel transfers is
 implemented. [Checked frame planning](FRAME_PLANNING.md) is implemented over
 exact checked placement. Private typed [physical realization](PHYSICAL_REALIZATION.md)
-is implemented; independent physical checking and final program closure remain
-planned.
+and independent native checking are implemented, with immutable physical
+publication and requested-only inspection. Final program closure remains planned.
 
 ## Shared final-MIR lowering
 
