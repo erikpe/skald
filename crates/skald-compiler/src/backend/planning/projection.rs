@@ -65,6 +65,7 @@ pub(in crate::backend) fn admit(
     for interface in program.interfaces.iter() {
         for requirement in &interface.requirements {
             let mut projected = signature(
+                program,
                 &requirement.parameters,
                 requirement.return_type,
                 Convention::Language,
@@ -88,6 +89,7 @@ pub(in crate::backend) fn admit(
     for ty in program.function_types.iter() {
         let id = function_types[&ty.id];
         facts.signatures[id.index()] = signature(
+            program,
             &ty.parameters,
             ty.result,
             Convention::Language,
@@ -102,6 +104,7 @@ pub(in crate::backend) fn admit(
             Convention::Language
         };
         let projected = signature(
+            program,
             &declaration.parameters,
             declaration.return_type,
             convention,
@@ -157,6 +160,7 @@ pub(in crate::backend) fn admit(
             .callable_signature(callable)
             .expect("declared member signature");
         let mut projected = signature(
+            program,
             declared.parameters,
             declared.return_type,
             Convention::Language,

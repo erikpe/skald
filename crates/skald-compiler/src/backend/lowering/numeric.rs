@@ -173,7 +173,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let (storage, value) = (guard.storage, self.values[guard.value.index()]);
         let address = self.address(block, storage)?;
         self.builder.append_into(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Load {
                 address,
                 representation: self.representation(storage)?,

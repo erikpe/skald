@@ -11,7 +11,11 @@ pub(super) fn unit_signature() -> SignatureFact {
     }
 }
 
-fn scalar(ty: MirType, functions: &BTreeMap<FunctionTypeId, SignatureId>) -> Option<ScalarType> {
+fn scalar(
+    program: &MirProgram,
+    ty: MirType,
+    functions: &BTreeMap<FunctionTypeId, SignatureId>,
+) -> Option<ScalarType> {
     Some(match ty {
         MirType::I64 => ScalarType::I64,
         MirType::U64 => ScalarType::U64,
@@ -20,10 +24,18 @@ fn scalar(ty: MirType, functions: &BTreeMap<FunctionTypeId, SignatureId>) -> Opt
         MirType::F64 => ScalarType::F64,
         MirType::Function(id) => ScalarType::CodeAddress(functions[&id]),
         MirType::Shared(_) => ScalarType::DataAddress,
+        MirType::Optional(id)
+            if program
+                .optional_type(id)
+                .is_some_and(|optional| optional.shared_owner().is_some()) =>
+        {
+            ScalarType::DataAddress
+        }
         _ => return None,
     })
 }
 pub(super) fn signature(
+    program: &MirProgram,
     parameters: &[MirParameter],
     result: MirType,
     convention: Convention,
@@ -39,7 +51,7 @@ pub(super) fn signature(
     };
     let returns = if result == MirType::Unit {
         ReturnShape::Unit
-    } else if let Some(ty) = scalar(result, functions) {
+    } else if let Some(ty) = scalar(program, result, functions) {
         ReturnShape::Scalar(ty)
     } else {
         ReturnShape::Aggregate(layout(result))
@@ -72,7 +84,7 @@ pub(super) fn signature(
                     }),
                 );
             }
-        } else if let Some(ty) = scalar(parameter.ty, functions) {
+        } else if let Some(ty) = scalar(program, parameter.ty, functions) {
             inputs.push(Component {
                 ty,
                 role: ComponentRole::Parameter(index),

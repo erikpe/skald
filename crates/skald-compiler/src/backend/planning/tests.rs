@@ -219,6 +219,64 @@ fn class_lifecycle_is_admitted_under_both_artifact_policies() {
 }
 
 #[test]
+fn optional_abi_and_admission_follow_the_storage_representation() {
+    let supported = fixture(concat!(
+        "class Value { init(){} }",
+        "fn tagged(value:i64?)->i64?{return value;}",
+        "fn nullable(value:shared? Value)->shared? Value{return value;}",
+        "fn main()->i64{return 0;}",
+    ));
+    for input in [
+        BackendInput::without_runtime_trace(&supported.mir),
+        BackendInput::without_runtime_trace(&supported.mir).with_reachable_artifacts_only(),
+    ] {
+        let admitted = admit(input).expect("primitive and nullable-owner optionals are supported");
+        let view = admitted.plan().view();
+        let signature = |name| {
+            let function = admitted
+                .program()
+                .declarations
+                .iter()
+                .find(|declaration| declaration.name == name)
+                .unwrap()
+                .id;
+            let callable = view
+                .callables()
+                .find(|callable| callable.key == LirCallableId::Source(function.into()))
+                .unwrap();
+            view.signature(view.signature_id(callable.signature.index()).unwrap())
+                .unwrap()
+        };
+        assert!(matches!(
+            signature("tagged").returns,
+            ReturnShape::Aggregate(_)
+        ));
+        assert!(matches!(
+            signature("nullable").returns,
+            ReturnShape::Scalar(ScalarType::DataAddress)
+        ));
+        assert_eq!(
+            signature("nullable").inputs,
+            vec![Component {
+                ty: ScalarType::DataAddress,
+                role: ComponentRole::Parameter(0),
+            }]
+        );
+    }
+
+    let unsupported = fixture(concat!(
+        "class Value { init(){} }",
+        "fn main()->i64{var value:Value?=none;return 0;}",
+    ));
+    for input in [
+        BackendInput::without_runtime_trace(&unsupported.mir),
+        BackendInput::without_runtime_trace(&unsupported.mir).with_reachable_artifacts_only(),
+    ] {
+        assert!(matches!(admit(input), Err(AdmissionError::Unsupported(_))));
+    }
+}
+
+#[test]
 fn extern_cells_are_projected_without_changing_public_emission() {
     let fixture = fixture("extern fn foreign(a: i64, b: u64, c: u8, d: f64, e: bool) -> i64; fn main() -> i64 { return foreign(1, 2u, 3u8, 4.0, true); }");
     let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();

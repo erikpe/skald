@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM09 are complete and LM10 is next.
+Status: active; LM01–LM10 are complete and LM11 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -47,7 +47,7 @@ per-callable or per-operation fallback.
 - [x] LM07 — Lower copy, cleanup and complete-class finalization
 - [x] LM08 — Lower shared ownership and generated owner helpers
 - [x] LM09 — Checkpoint the aggregate and lifecycle core
-- [ ] LM10 — Lower primitive and shared-owner optional behavior
+- [x] LM10 — Lower primitive and shared-owner optional behavior
 - [ ] LM11 — Lower aggregate, class and boxed optional behavior
 - [ ] LM12 — Lower array storage, construction, positions and anchors
 - [ ] LM13 — Lower array element lifecycle and generated helper families
@@ -356,19 +356,34 @@ the complete repository, golden and MSRV gates pass for the checkpoint.
 **Purpose:** implement optional forms whose payloads use scalar or existing
 shared-owner lifecycle.
 
-- [ ] Lower primitive presence, initialization, assignment, unwrap and absence
+- [x] Lower primitive presence, initialization, assignment, unwrap and absence
   failures with canonical payload/state representation.
-- [ ] Lower optional shared initialization, copy/assignment, cleanup, return and
+- [x] Lower optional shared initialization, copy/assignment, cleanup, return and
   unwrap using the zero niche and balanced retain/release.
-- [ ] Lower optional and optional-box presence/view guard begin/end, overflow,
-  underflow and pinned-mutation checks where applicable.
-- [ ] Preserve nested layer identity and success-only payload/owner availability.
+- [x] Confirm that scalar tagged and nullable shared-owner optionals require no
+  view guard, overflow, underflow or pinned-mutation operations; retain those
+  operations with the aggregate/class/boxed representations owned by LM11.
+- [x] Preserve optional identity without flattening unsupported nested layers,
+  and make payloads/owners available only on successful access edges.
 
 **Tests:** every primitive kind, absent/present nesting, shared owner lifetime,
 view counts, mutation rejection, ABI pressure and exact failure attribution.
 
 **Exit criteria:** primitive and shared optional rows execute through checked LIR
 with no guard or ownership special case below selection.
+
+Completed on 2026-09-19. Shared lowering now expands primitive tagged optionals
+and nullable shared-owner optionals into ordinary checked loads, stores,
+comparisons, calls and control flow. Primitive payloads are read only on present
+edges. Shared copies retain conditionally, assignments retain before releasing
+the prior owner (including self-assignment), cleanup releases conditionally, and
+returns preserve the null niche. Complete planning admits only these two
+representations; aggregate, class and boxed optionals, together with their view
+guards and pin checks, remain explicitly assigned to LM11. Native tests cover
+all primitive kinds, composed absent/present paths, shared lifetime and
+synthesized field finalization, register and stack argument pressure, both trace
+and artifact policies, and exact absent-access reporting. `make check`, full
+golden determinism, release golden execution and the Rust 1.82 MSRV check pass.
 
 ### LM11 — Lower aggregate, class and boxed optional behavior
 

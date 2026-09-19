@@ -34,6 +34,11 @@ impl<'plan> Lowerer<'plan, '_> {
                 self.pop_trace(block)?;
                 Terminator::Return(vec![value])
             }
+            MirTerminator::ReturnOptionalShared { owner, .. } => {
+                let value = self.load_storage(block, *owner)?;
+                self.pop_trace(block)?;
+                Terminator::Return(vec![value])
+            }
             MirTerminator::Goto { target, .. } => Terminator::Jump(self.edge(*target)),
             MirTerminator::Branch {
                 condition,
@@ -75,10 +80,11 @@ impl<'plan> Lowerer<'plan, '_> {
                 failure_target,
                 ..
             } => return self.checked_shared_cast(block, cast, *success_target, *failure_target),
+            optional if self.optional_terminator(block, optional)? => return Ok(()),
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         self.builder
-            .terminate(self.blocks[block.index()], terminator)?;
+            .terminate(self.active_blocks[block.index()], terminator)?;
         Ok(())
     }
 }

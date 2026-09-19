@@ -32,7 +32,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 let address = self.place_address(block, &store.destination)?;
                 let representation = self.place_representation(&store.destination)?;
                 self.builder.append(
-                    self.blocks[block.index()],
+                    self.active_blocks[block.index()],
                     Operation::Store {
                         address,
                         value: self.values[store.value.index()],
@@ -54,9 +54,18 @@ impl<'plan> Lowerer<'plan, '_> {
                     self.type_test(block, assign.result, source, *target)?;
                     return Ok(());
                 }
+                if let MirRvalueKind::OptionalPresence { source, kind } = &assign.rvalue.kind {
+                    let operation = self.optional_presence(block, source, *kind)?;
+                    self.builder.append_into(
+                        self.active_blocks[block.index()],
+                        operation,
+                        &[self.values[assign.result.index()]],
+                    )?;
+                    return Ok(());
+                }
                 let operation = self.rvalue(block, &assign.rvalue.kind)?;
                 self.builder.append_into(
-                    self.blocks[block.index()],
+                    self.active_blocks[block.index()],
                     operation,
                     &[self.values[assign.result.index()]],
                 )?;
@@ -88,6 +97,19 @@ impl<'plan> Lowerer<'plan, '_> {
             }
             MirInstruction::SharedFieldReplace(replace) => {
                 self.shared_field_replace(block, replace)?
+            }
+            MirInstruction::OptionalInitialize(initialize) => {
+                self.optional_initialize(block, initialize)?
+            }
+            MirInstruction::OptionalAssign(assign) => self.optional_assign(block, assign)?,
+            MirInstruction::OptionalSharedInitialize(initialize) => {
+                self.optional_shared_initialize(block, initialize)?
+            }
+            MirInstruction::OptionalSharedAssign(assign) => {
+                self.optional_shared_assign(block, assign)?
+            }
+            MirInstruction::OptionalSharedCleanup(cleanup) => {
+                self.optional_shared_cleanup(block, cleanup)?
             }
             _ => return Err(PlanError::InvalidDomain.into()),
         }

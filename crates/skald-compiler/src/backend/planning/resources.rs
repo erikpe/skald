@@ -375,7 +375,8 @@ fn declare_generated_resources(
                     HelperFamily::ClassFinalizer,
                     facts.semantic.classes[target.index()].complete_layout,
                 )?),
-                DestructionStepFact::SharedField(_) => ArtifactId::Callable(helper_for(
+                DestructionStepFact::SharedField(_)
+                | DestructionStepFact::OptionalSharedField(_) => ArtifactId::Callable(helper_for(
                     facts,
                     HelperFamily::Release,
                     facts
@@ -662,10 +663,13 @@ fn owner_helper_needs(
     let mut retain = false;
     let mut release = classes.iter().any(|class| {
         facts.semantic.class(*class).is_some_and(|class| {
-            class
-                .destruction
-                .iter()
-                .any(|step| matches!(step, DestructionStepFact::SharedField(_)))
+            class.destruction.iter().any(|step| {
+                matches!(
+                    step,
+                    DestructionStepFact::SharedField(_)
+                        | DestructionStepFact::OptionalSharedField(_)
+                )
+            })
         })
     });
     for definition in input.program().executable_definitions() {
@@ -688,6 +692,17 @@ fn owner_helper_needs(
                 }
                 crate::mir::MirInstruction::SharedRelease(_)
                 | crate::mir::MirInstruction::SharedFieldReplace(_) => release = true,
+                crate::mir::MirInstruction::OptionalSharedInitialize(initialize) => {
+                    retain |= matches!(
+                        initialize.source,
+                        crate::mir::MirOptionalSharedSource::Copy(_)
+                    );
+                }
+                crate::mir::MirInstruction::OptionalSharedAssign(assign) => {
+                    retain |= matches!(assign.source, crate::mir::MirOptionalSharedSource::Copy(_));
+                    release = true;
+                }
+                crate::mir::MirInstruction::OptionalSharedCleanup(_) => release = true,
                 crate::mir::MirInstruction::CopyConstruct(copy) => {
                     retain |= constructor_copy_uses_shared(input.program(), copy.operation)
                 }
@@ -708,7 +723,7 @@ fn owner_helper_needs(
                         ..
                     },
                     ..
-                })
+                }) | Some(crate::mir::MirTerminator::OptionalSharedUnwrap { .. })
             ) {
                 retain = true;
             }
@@ -756,7 +771,8 @@ where
         }
         for field in &copy.fields {
             match *field {
-                crate::mir::MirSynthesizedFieldCopy::Shared { .. } => return true,
+                crate::mir::MirSynthesizedFieldCopy::Shared { .. }
+                | crate::mir::MirSynthesizedFieldCopy::OptionalShared { .. } => return true,
                 crate::mir::MirSynthesizedFieldCopy::Class { operation, .. } => {
                     pending.push(operation)
                 }

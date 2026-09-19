@@ -222,6 +222,46 @@ fn aggregate_lifecycle_checkpoint_crosses_every_policy_and_schedule() {
 }
 
 #[test]
+fn primitive_and_shared_optionals_execute_through_the_verified_path() {
+    let primitive = concat!(
+        "fn choose(a:i64?,b:i64?,c:i64?,d:i64?,e:i64?,f:i64?,g:i64?)->i64?{",
+        "if(g is some){return g;}return a;}",
+        "fn main()->i64{",
+        "var signed:i64?=1;var unsigned:u64?=2u;var byte:u8?=3u8;",
+        "var floating:f64?=4.0;var truth:bool?=true;",
+        "signed=signed;var selected:i64?=choose(none,none,none,none,none,none,6);",
+        "if(unsigned is none){return 1;}if(byte is none){return 2;}",
+        "if(floating is none){return 3;}if(truth is none){return 4;}",
+        "return signed!+selected!+35;}",
+    );
+    let shared = concat!(
+        "class Value { marker:i64; init(marker:i64){self.marker=marker;} }",
+        "class Holder { value:shared? Value; init(value:shared? Value){self.value=value;} }",
+        "fn forward(a:shared? Value,b:shared? Value,c:shared? Value,d:shared? Value,",
+        "e:shared? Value,f:shared? Value,g:shared? Value)->shared? Value{",
+        "if(g is some){return g;}return a;}",
+        "fn main()->i64{",
+        "var owner:shared? Value=new Value(35);var copy:shared? Value=owner;",
+        "copy=copy;var holder:Holder=Holder(copy);var copied:Holder=holder;",
+        "owner=none;copy=none;",
+        "var result:shared? Value=forward(none,none,none,none,none,none,copied.value);",
+        "return result!->marker+7;}",
+    );
+    for (family, source) in [("primitive", primitive), ("shared", shared)] {
+        for mode in [MirMode::Default, MirMode::Minimal] {
+            let fixture = fixture(mode, source);
+            for reachable in [false, true] {
+                let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, reachable)
+                    .unwrap_or_else(|error| {
+                        panic!("{family}/{mode:?}/reachable={reachable}: {error}")
+                    });
+                assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 42);
+            }
+        }
+    }
+}
+
+#[test]
 fn object_initialization_dispatch_and_checked_views_execute_through_the_verified_path() {
     let source = concat!(
         "interface Readable { fn read() -> i64; fn pressure(a:i64,b:i64,c:i64,d:i64,e:i64,f:i64,g:i64,h:i64)->i64; }",
@@ -592,6 +632,37 @@ fn checked_division_failure_preserves_runtime_reporting_and_trace_policy() {
 }
 
 #[test]
+fn absent_optional_unwrap_preserves_runtime_reporting_and_trace_policy() {
+    for source in [
+        "fn main()->i64{var value:i64?=none;return value!;}",
+        concat!(
+            "class Value { init(){} fn read()->i64{return 1;} }",
+            "fn main()->i64{var value:shared? Value=none;return value!->read();}",
+        ),
+    ] {
+        for trace in [RuntimeTracePolicy::Enabled, RuntimeTracePolicy::Omitted] {
+            let fixture = fixture(MirMode::Minimal, source);
+            let assembly = compile(&fixture, trace, true).unwrap();
+            let output = run_native_assembly_with_c_probe(&assembly, "");
+            assert!(!output.status.success());
+            let stderr = String::from_utf8(output.stderr).unwrap();
+            assert!(
+                stderr.contains("panic: optional value is absent"),
+                "{stderr}"
+            );
+            assert_eq!(
+                stderr.contains("stacktrace:"),
+                trace == RuntimeTracePolicy::Enabled
+            );
+            if trace == RuntimeTracePolicy::Enabled {
+                assert!(stderr.contains("main::main"), "{stderr}");
+                assert!(stderr.contains("native-pilot.ska"), "{stderr}");
+            }
+        }
+    }
+}
+
+#[test]
 fn class_copy_cleanup_and_nested_finalizers_execute_through_the_verified_path() {
     let source = concat!(
         "class Leaf { value:i64; init(value:i64){self.value=value;} ",
@@ -716,9 +787,10 @@ fn destructor_failure_keeps_the_user_body_and_cleanup_site_in_the_trace() {
 }
 
 #[test]
-fn unsupported_optional_lifecycle_rejects_without_changing_the_public_backend() {
+fn unsupported_aggregate_optional_lifecycle_rejects_without_changing_the_public_backend() {
     let source = concat!(
-        "class Item { value:i64; pending:i64?; ",
+        "class Pending { init(){} }",
+        "class Item { value:i64; pending:Pending?; ",
         "init(value:i64){self.value=value;self.pending=none;} ",
         "fn read()->i64{return self.value;} }",
         "fn main()->i64{var item:Item=Item(7);return item.read();}",

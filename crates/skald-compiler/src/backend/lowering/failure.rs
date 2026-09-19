@@ -27,6 +27,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 FailureMessage::PrimitiveCastOutOfRange
             }
             MirTerminationReason::ObjectCastFailure => FailureMessage::ObjectCastFailure,
+            MirTerminationReason::OptionalAccessFailure => FailureMessage::OptionalAccessFailure,
             _ => return Err(PlanError::InvalidDomain.into()),
         };
         let target = ArtifactId::Runtime(RuntimeService::Panic);
@@ -36,7 +37,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .signature
             .ok_or(PlanError::InvalidSignature)?;
         let source_block = block;
-        let block = self.blocks[block.index()];
+        let block = self.active_blocks[block.index()];
         let message = self.builder.append(
             block,
             Operation::SymbolAddress {

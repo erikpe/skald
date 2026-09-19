@@ -16,7 +16,10 @@ pub(super) struct Lowerer<'plan, 'input> {
     pub(super) admitted: &'plan AdmittedProgram<'input>,
     pub(super) definition: MirDefinitionRef<'plan>,
     pub(super) builder: DraftBuilder<'plan>,
+    /// Stable entries named by MIR edges.
     pub(super) blocks: Vec<BlockHandle<'plan>>,
+    /// Current append point after one MIR instruction expands into internal CFG.
+    pub(super) active_blocks: Vec<BlockHandle<'plan>>,
     pub(super) values: Vec<ValueHandle<'plan>>,
     pub(super) objects: Vec<Option<ObjectHandle<'plan>>>,
     /// Entry-carried addresses replace local objects for aggregate results,
@@ -79,6 +82,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             admitted,
             definition,
             builder,
+            active_blocks: blocks.clone(),
             blocks,
             values,
             objects: vec![],
@@ -198,6 +202,14 @@ pub(super) fn scalar_type(
                 .ok_or(PlanError::UnknownDeclaration)?,
         ),
         MirType::Shared(_) => ScalarType::DataAddress,
+        MirType::Optional(id)
+            if admitted
+                .program()
+                .optional_type(id)
+                .is_some_and(|optional| optional.shared_owner().is_some()) =>
+        {
+            ScalarType::DataAddress
+        }
         _ => return Err(PlanError::InvalidSignature.into()),
     })
 }

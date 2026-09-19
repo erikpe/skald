@@ -13,6 +13,7 @@ mod generated_ownership;
 mod lifecycle;
 mod memory;
 mod numeric;
+mod optional;
 mod origin;
 mod ownership;
 mod place;

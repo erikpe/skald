@@ -76,7 +76,7 @@ impl<'plan> Lowerer<'plan, '_> {
     ) -> Result<CallAttribution, LowerError> {
         let location = if let Some(record) = self.trace_record {
             let location = self.location(origin)?;
-            let block = self.blocks[block.index()];
+            let block = self.active_blocks[block.index()];
             let site = if terminal {
                 TraceSite::Terminator(block)
             } else {
@@ -127,7 +127,7 @@ impl<'plan> Lowerer<'plan, '_> {
     pub(super) fn pop_trace(&mut self, block: BlockId) -> Result<(), LowerError> {
         if let Some(record) = self.trace_record {
             self.builder.append(
-                self.blocks[block.index()],
+                self.active_blocks[block.index()],
                 Operation::Trace(TraceAction::PopFrame { record }),
             )?;
         }

@@ -134,11 +134,11 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `SharedRelease` | `lower/ownership.rs`, `lower/ownership/count.rs` | Last-owner graph, finalizer call and free original header; calls/clobbers visible before placement | E07, E08 | G04 closed | Delivered by LM08 |
 | `SharedFieldInitialize`, `SharedFieldReplace` | `lower/ownership.rs` | Initialize or replace edge; retain secured replacement before old-owner release | E07 | — | Delivered by LM08 |
 | `StringInitialize` | `lower/strings.rs`, `literal_data.rs` | Exact byte slice/descriptor with pooled immutable backing and planned initializer shape | E11 | — | LA04 |
-| `OptionalInitialize`, `OptionalAssign` | `lower/optional/scalar.rs` | Exact primitive presence/payload representation; assignment preserves absence semantics | E08 | — | LA04 |
-| `AggregateOptionalInitialize`, `AggregateOptionalAssign`, `AggregateOptionalPublish`, `AggregateOptionalCleanup` | `lower/optional/aggregate.rs` | Recursive state/payload layout, publish after initialization, conditional cleanup and pin checks | E08 | — | LA04 |
-| `ClassOptionalInitialize`, `ClassOptionalAssign`, `ClassOptionalPublish`, `ClassOptionalCleanup` | `lower/optional/inline_class.rs` | Aligned inline payload, copy/destruction order, explicit publication state and pinned-mutation behavior | E08 | — | LA04 |
-| `EndOptionalView`, `EndOptionalBoxView` | `lower/optional/access.rs` | Real guard decrement with underflow hard trap; not equivalent to `EndCheckedView` | E08 | — | LA04 |
-| `OptionalSharedInitialize`, `OptionalSharedAssign`, `OptionalSharedCleanup` | `lower/optional/shared_owner.rs` | Zero-niche absent owner, conditional retain/release and balanced self-assignment | E08 | G04 for release path | LA04 |
+| `OptionalInitialize`, `OptionalAssign` | `lower/optional/scalar.rs` | Exact primitive presence/payload representation; assignment preserves absence semantics | E08 | — | Delivered by LM10 for primitive tagged optionals |
+| `AggregateOptionalInitialize`, `AggregateOptionalAssign`, `AggregateOptionalPublish`, `AggregateOptionalCleanup` | `lower/optional/aggregate.rs` | Recursive state/payload layout, publish after initialization, conditional cleanup and pin checks | E08 | — | LM11 |
+| `ClassOptionalInitialize`, `ClassOptionalAssign`, `ClassOptionalPublish`, `ClassOptionalCleanup` | `lower/optional/inline_class.rs` | Aligned inline payload, copy/destruction order, explicit publication state and pinned-mutation behavior | E08 | — | LM11 |
+| `EndOptionalView`, `EndOptionalBoxView` | `lower/optional/access.rs` | Real guard decrement with underflow hard trap; not equivalent to `EndCheckedView` | E08 | — | LM11 |
+| `OptionalSharedInitialize`, `OptionalSharedAssign`, `OptionalSharedCleanup` | `lower/optional/shared_owner.rs` | Zero-niche absent owner, conditional retain/release and balanced self-assignment | E08 | G04 closed | Delivered by LM10 |
 | `Array` | `lower/array.rs` and siblings | All 29 members below; explicit lifecycle, checks, backing anchors and loops | E09, E10 | — | LA04 |
 | `Io` | `lower/io.rs` | All five runtime operations below; raw buffer pointers/lengths with anchored owner | E11 | — | LA04 |
 
@@ -156,7 +156,7 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `PrimitiveComparison` | `lower/assignment.rs` | Six shared predicates, integer signedness, floating unordered behavior and canonical bool | E01, E03 | — | LA03 |
 | `PrimitiveCast`, `CheckedF64ToInteger` | `lower/primitive_cast.rs` | Exact source/target cells; checked finite post-truncation range; preserve bits/canonical forms | E03 | — | LA03 |
 | `TypeTest` | `lower/type_operations.rs` | Runtime membership against planned metadata; exact static outcome already realized in MIR | E12 | — | Delivered by LM06 |
-| `OptionalPresence`, `OptionalBoxPresence` | `lower/optional/scalar.rs`, `lower/optional/access.rs` | Exact layer/kind, planned tag or niche, secured box owner | E08 | — | LA04 |
+| `OptionalPresence`, `OptionalBoxPresence` | `lower/optional/scalar.rs`, `lower/optional/access.rs` | Exact layer/kind, planned tag or niche, secured box owner | E08 | — | `OptionalPresence` delivered by LM10 for primitive/shared representations; boxed presence remains LM11 |
 | `ArrayLength` | `lower/array.rs` | Length from exact planned descriptor/header representation | E09 | — | LA04 |
 
 Scalar operation members are not additional opaque lifecycle operations:
@@ -193,16 +193,16 @@ handle checked terminators before the basic `lower/terminator.rs` fallback.
 | `MirTerminator` members | Current owner | Future shared lowering obligation / invariant | Evidence | Gap | Delivery (pending) |
 | --- | --- | --- | --- | --- | --- |
 | `Return` | `lower/terminator.rs`, `lower/call/*` | Unit/scalar or previously materialized aggregate destination; result survives cleanup and trace pop | E02, E05, E06, E16 | G03 | LA03 scalar; LA04 aggregate |
-| `ReturnShared`, `ReturnOptionalShared` | `lower/terminator.rs` | Transfer live owner or zero niche to caller, no hidden aggregate destination | E07, E08 | — | `ReturnShared` delivered by LM08; optional shared return remains LM10 |
+| `ReturnShared`, `ReturnOptionalShared` | `lower/terminator.rs` | Transfer live owner or zero niche to caller, no hidden aggregate destination | E07, E08 | — | `ReturnShared` delivered by LM08; `ReturnOptionalShared` delivered by LM10 |
 | `Goto`, `Branch` | `lower/terminator.rs` | Explicit target CFG and canonical condition; stable entry/block ordering | E04 | G02 | LA03 |
 | `ShiftCountCheck` | `lower/shift.rs` | Success/failure edges before operation; reject count at selected width | E03 | — | LA03 |
 | `IntegerDivisorCheck` | `lower/integer_division.rs` | Matching divisor check and operation-specific failure attribution | E03 | G02 | LA03 |
 | `PrimitiveCastRangeCheck` | `lower/primitive_cast.rs` | Matching finite/range relation with success-only conversion | E03 | — | LA03 |
 | `CheckedCast` | `lower/type_operations.rs` | Runtime membership and success-only carrier, exact failure edge | E12 | — | Delivered by LM06 |
 | `SharedCast` | `lower/type_operations.rs` | Runtime membership plus success-only owner transfer/retain semantics | E07, E12 | — | Delivered by LM08 |
-| `OptionalUnwrap`, `OptionalSharedUnwrap` | `lower/optional/access.rs` | Success-only payload/owner transfer, absent failure with exact layer | E08 | — | LA04 |
-| `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LA04 |
-| `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LA04 |
+| `OptionalUnwrap`, `OptionalSharedUnwrap` | `lower/optional/access.rs` | Success-only payload/owner transfer, absent failure with exact layer | E08 | — | Delivered by LM10 for primitive tagged and nullable shared-owner representations |
+| `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LM11 |
+| `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LM11 |
 | `ArrayPositionCheck`, `ArrayOperationCheck`, `ArrayLoop` | `lower/array.rs` | Valid position/failure relation, selected failure result, forward/reverse counted loop with explicit index state | E09, E10 | — | LA04 |
 | `Panic`, `Terminate` | `lower/terminator.rs` | Exact message/reason/location; ordered reporter, no unwind/extra cleanup | E03, E11, E16 | G05 mode handoff | LA03 scalar failures; LA04 remaining |
 
@@ -775,6 +775,18 @@ class and shared-owner families without eagerly inventing raw class-copy
 wrappers; those wrappers remain owned by array-element lifecycle. No object or
 shared-core exception remains before optional and array lowering begins.
 
+LM10 delivers the scalar optional slice. Primitive optionals keep their checked
+tagged layout and branch before reading an absent payload. Nullable shared-owner
+optionals use the null niche at call boundaries and expand conditional retain,
+release, return and unwrap into ordinary checked LIR. Synthesized class copy and
+finalization apply the same rules to optional shared fields. These forms have no
+view counter or pinned mutation state; their guard operations remain absent,
+while aggregate, class and boxed optional guards stay explicitly owned by LM11.
+Native evidence covers all primitive payload kinds, absent and present values,
+shared self-assignment and lifetime, ABI pressure, exact access failure and both
+artifact policies without adding an optional-specific selected or physical
+operation.
+
 LM03 adds the complete immutable resource catalog. Planning now owns active and
 retained-inactive static dispositions, activation/reverse-shutdown records,
 literal and failure backing, trace/TLS records, dispatch/container descriptors,
@@ -802,7 +814,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Direct/virtual/interface dispatch, checked views, object casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | Delivered by LM06; owner-producing shared casts remain with LM08 |
 | Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07 for scalar/class copy and user/class/base destruction; remaining step families retain LM08/LM11/LM13 owners |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | Delivered by LM08 for class owners; wrapper/container owners reuse this core in LM10–LM14 |
-| Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | LM10 |
+| Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | Delivered by LM10; aggregate/class/boxed guards remain LM11 |
 | Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | LM11 |
 | Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | LM12 |
 | Array copy/assignment/destruction and six generated array helper families | Element lifecycle facts plus canonical recursive helper declarations/dependencies | LM13 |

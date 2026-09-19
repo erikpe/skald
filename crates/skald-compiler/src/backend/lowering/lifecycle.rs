@@ -55,7 +55,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let signature = self.callable_signature(target)?;
         let attribution = self.attribution(block, cleanup.span, false)?;
         self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Call(Call {
                 target: CallTarget::Direct(ArtifactId::Callable(target)),
                 signature,
@@ -220,6 +220,19 @@ impl<'plan> Lowerer<'plan, '_> {
                 &source.clone().project_field(field),
                 span,
             ),
+            MirSynthesizedFieldCopy::OptionalPrimitive { field, .. } => self
+                .optional_primitive_copy(
+                    block,
+                    &destination.clone().project_field(field),
+                    &source.clone().project_field(field),
+                ),
+            MirSynthesizedFieldCopy::OptionalShared { field, .. } => self.optional_shared_copy(
+                block,
+                &destination.clone().project_field(field),
+                &source.clone().project_field(field),
+                span,
+                false,
+            ),
             _ => Err(PlanError::InvalidDomain.into()),
         }
     }
@@ -251,6 +264,19 @@ impl<'plan> Lowerer<'plan, '_> {
                 &source.clone().project_field(field),
                 span,
             ),
+            MirSynthesizedFieldCopy::OptionalPrimitive { field, .. } => self
+                .optional_primitive_copy(
+                    block,
+                    &destination.clone().project_field(field),
+                    &source.clone().project_field(field),
+                ),
+            MirSynthesizedFieldCopy::OptionalShared { field, .. } => self.optional_shared_copy(
+                block,
+                &destination.clone().project_field(field),
+                &source.clone().project_field(field),
+                span,
+                true,
+            ),
             _ => Err(PlanError::InvalidDomain.into()),
         }
     }
@@ -267,7 +293,7 @@ impl<'plan> Lowerer<'plan, '_> {
         }
         let source = self.place_address(block, source)?;
         let value = self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Load {
                 address: source,
                 representation,
@@ -275,7 +301,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )?[0];
         let destination = self.place_address(block, destination)?;
         self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Store {
                 address: destination,
                 value,
@@ -321,7 +347,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .collect::<Result<Vec<_>, LowerError>>()?;
         let attribution = self.attribution(block, span, false)?;
         self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Call(Call {
                 target: CallTarget::Direct(ArtifactId::Callable(target)),
                 signature,
@@ -338,7 +364,7 @@ impl<'plan> Lowerer<'plan, '_> {
         class: ClassId,
     ) -> Result<crate::backend::lir::ValueHandle<'plan>, LowerError> {
         Ok(self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::SymbolAddress {
                 symbol: ArtifactId::Data(DataKey::ClassDispatch(class)),
                 ty: ScalarType::DataAddress,

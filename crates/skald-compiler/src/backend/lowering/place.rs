@@ -80,14 +80,14 @@ impl<'plan> Lowerer<'plan, '_> {
                     address = self.byte_offset(block, address, fact.element_offset)?;
                     let index_address = self.address(block, normalized_index)?;
                     let index = self.builder.append(
-                        self.blocks[block.index()],
+                        self.active_blocks[block.index()],
                         Operation::Load {
                             address: index_address,
                             representation: self.representation(normalized_index)?,
                         },
                     )?[0];
                     address = self.builder.append(
-                        self.blocks[block.index()],
+                        self.active_blocks[block.index()],
                         Operation::ScaledIndex {
                             base: address,
                             index,
@@ -123,7 +123,7 @@ impl<'plan> Lowerer<'plan, '_> {
         })
     }
 
-    fn place_type(&self, place: &MirPlace) -> Result<SemanticType, LowerError> {
+    pub(super) fn place_type(&self, place: &MirPlace) -> Result<SemanticType, LowerError> {
         let mut ty = match place.base {
             MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
                 semantic_type(
@@ -206,7 +206,7 @@ impl<'plan> Lowerer<'plan, '_> {
                     .ok_or(PlanError::UnknownDeclaration)?
                     .ty;
                 let address = self.builder.append(
-                    self.blocks[block.index()],
+                    self.active_blocks[block.index()],
                     Operation::SymbolAddress {
                         symbol: ArtifactId::Data(DataKey::Static(field)),
                         ty: ScalarType::DataAddress,

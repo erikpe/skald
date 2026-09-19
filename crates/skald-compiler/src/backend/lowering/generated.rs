@@ -45,19 +45,20 @@ pub(super) fn lower_class_finalizer<'plan>(
         return Err(PlanError::InvalidSignature.into());
     };
     let complete = *complete;
+    let mut current = entry;
 
     for step in class.destruction.clone() {
         match step {
             DestructionStepFact::UserBody(destructor) => {
                 let metadata = symbol_address(
                     &mut builder,
-                    entry,
+                    current,
                     ArtifactId::Data(DataKey::ClassDispatch(class.class)),
                 )?;
                 call_source_destructor(
                     plan,
                     &mut builder,
-                    entry,
+                    current,
                     owner.key(),
                     LirCallableId::Source(destructor.into()),
                     complete,
@@ -72,16 +73,16 @@ pub(super) fn lower_class_finalizer<'plan>(
                 let crate::backend::plan::SemanticType::Class(target) = field.ty else {
                     return Err(PlanError::InvalidDomain.into());
                 };
-                let address = byte_offset(&mut builder, entry, complete, field.offset)?;
-                call_finalizer(plan, &mut builder, entry, owner.key(), target, address)?;
+                let address = byte_offset(&mut builder, current, complete, field.offset)?;
+                call_finalizer(plan, &mut builder, current, owner.key(), target, address)?;
             }
             DestructionStepFact::Base(target) => {
                 let base = class.base.ok_or(PlanError::InvalidDomain)?;
                 if base.class != target {
                     return Err(PlanError::InvalidDomain.into());
                 }
-                let address = byte_offset(&mut builder, entry, complete, base.offset)?;
-                call_finalizer(plan, &mut builder, entry, owner.key(), target, address)?;
+                let address = byte_offset(&mut builder, current, complete, base.offset)?;
+                call_finalizer(plan, &mut builder, current, owner.key(), target, address)?;
             }
             DestructionStepFact::SharedField(field) => {
                 let field = plan
@@ -91,10 +92,10 @@ pub(super) fn lower_class_finalizer<'plan>(
                 if !matches!(field.ty, crate::backend::plan::SemanticType::Shared(_)) {
                     return Err(PlanError::InvalidDomain.into());
                 }
-                let address = byte_offset(&mut builder, entry, complete, field.offset)?;
+                let address = byte_offset(&mut builder, current, complete, field.offset)?;
                 let data = plan.profile().data_layout;
                 let handle = builder.append(
-                    entry,
+                    current,
                     Operation::Load {
                         address,
                         representation: crate::backend::lir::MemoryRepresentation {
@@ -107,17 +108,90 @@ pub(super) fn lower_class_finalizer<'plan>(
                 call_owner_helper(
                     plan,
                     &mut builder,
-                    entry,
+                    current,
                     owner.key(),
                     HelperFamily::Release,
                     handle,
                 )?;
             }
+            DestructionStepFact::OptionalSharedField(field) => {
+                let field = plan
+                    .semantic()
+                    .field(field)
+                    .ok_or(PlanError::UnknownDeclaration)?;
+                if !matches!(
+                    field.ty,
+                    crate::backend::plan::SemanticType::Optional(optional)
+                        if plan
+                            .semantic()
+                            .optional(optional)
+                            .is_some_and(|fact| fact.nullable_niche)
+                ) {
+                    return Err(PlanError::InvalidDomain.into());
+                }
+                let address = byte_offset(&mut builder, current, complete, field.offset)?;
+                let data = plan.profile().data_layout;
+                let handle = builder.append(
+                    current,
+                    Operation::Load {
+                        address,
+                        representation: crate::backend::lir::MemoryRepresentation {
+                            scalar: ScalarType::DataAddress,
+                            bytes: data.pointer_bytes,
+                            alignment: data.pointer_alignment,
+                        },
+                    },
+                )?[0];
+                let null = builder.append(
+                    current,
+                    Operation::Constant(Constant::Null(ScalarType::DataAddress)),
+                )?[0];
+                let present = builder.append(
+                    current,
+                    Operation::Compare {
+                        predicate:
+                            crate::primitive_comparison::PrimitiveComparisonPredicate::NotEqual,
+                        left: handle,
+                        right: null,
+                    },
+                )?[0];
+                let release = builder.reserve_block()?;
+                let next = builder.reserve_block()?;
+                builder.define_block(release, &[])?;
+                builder.define_block(next, &[])?;
+                builder.terminate(
+                    current,
+                    Terminator::Branch {
+                        condition: present,
+                        true_edge: edge(release),
+                        false_edge: edge(next),
+                    },
+                )?;
+                call_owner_helper(
+                    plan,
+                    &mut builder,
+                    release,
+                    owner.key(),
+                    HelperFamily::Release,
+                    handle,
+                )?;
+                builder.terminate(release, Terminator::Jump(edge(next)))?;
+                current = next;
+            }
             _ => return Err(PlanError::InvalidDomain.into()),
         }
     }
-    builder.terminate(entry, Terminator::Return(vec![]))?;
+    builder.terminate(current, Terminator::Return(vec![]))?;
     crate::backend::lir::verify_callable(builder.finish()).map_err(LowerError::Verification)
+}
+
+fn edge<'plan>(
+    target: crate::backend::lir::BlockHandle<'plan>,
+) -> crate::backend::lir::Edge<ValueHandle<'plan>, crate::backend::lir::BlockHandle<'plan>> {
+    crate::backend::lir::Edge {
+        target,
+        arguments: vec![],
+    }
 }
 
 fn call_owner_helper<'plan>(

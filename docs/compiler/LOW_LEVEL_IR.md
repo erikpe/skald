@@ -106,13 +106,16 @@ Requesting reachable artifact emission does not remove unsupported bodies.
 Direct receiver-bearing bodies, aliases, complex places, aggregate parameters,
 initializers, runtime type tests, checked object views, virtual/interface
 dispatch, scalar/class/shared-field user and synthesized copy, class cleanup and
-shared class-owner lifecycle are eligible. Optional/container lifecycle, I/O,
-string initialization and statics still reject explicitly.
+shared class-owner lifecycle, primitive tagged optionals and nullable
+shared-owner optionals are eligible. Aggregate/class/boxed optional lifecycle,
+container lifecycle, I/O, string initialization and statics still reject
+explicitly.
 Complete artifact emission supports class metadata, copy, finalization and
-shared-owner families. It still rejects declared optional and array families
-whose generated lifecycle roots are not yet implemented. Reachable emission
-uses certified runtime obligations; unused declarations do not acquire
-executable authority.
+shared-owner families, including nullable shared-owner optionals. It still
+rejects declared aggregate/class/boxed optional and array families whose
+generated lifecycle roots are not yet implemented. Reachable emission uses
+certified runtime obligations; unused declarations do not acquire executable
+authority.
 
 The admitted product borrows the exact inspected MIR snapshot for shared lowering
 and owns immutable checked facts. It preserves absent source declarations,

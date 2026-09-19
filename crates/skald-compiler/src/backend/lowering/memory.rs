@@ -115,8 +115,10 @@ impl<'plan> Lowerer<'plan, '_> {
             *address
         } else {
             let object = self.objects[storage.index()].ok_or(PlanError::InvalidDomain)?;
-            self.builder
-                .append(self.blocks[block.index()], Operation::ObjectAddress(object))?[0]
+            self.builder.append(
+                self.active_blocks[block.index()],
+                Operation::ObjectAddress(object),
+            )?[0]
         };
         self.addresses.insert((block, storage), result);
         Ok(result)
@@ -130,7 +132,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let address = self.address(block, storage)?;
         let representation = self.representation(storage)?;
         self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Store {
                 address,
                 value,
@@ -154,7 +156,7 @@ impl<'plan> Lowerer<'plan, '_> {
         {
             let object = self.objects[storage.index()].ok_or(PlanError::InvalidDomain)?;
             self.builder.append(
-                self.blocks[block.index()],
+                self.active_blocks[block.index()],
                 Operation::Lifetime {
                     marker,
                     object,
@@ -239,7 +241,7 @@ impl<'plan> Lowerer<'plan, '_> {
     ) -> Result<ValueHandle<'plan>, LowerError> {
         let address = self.address(block, storage)?;
         Ok(self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Load {
                 address,
                 representation: self.representation(storage)?,
@@ -257,13 +259,13 @@ impl<'plan> Lowerer<'plan, '_> {
             return Ok(base);
         }
         let offset = self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Constant(Constant::U64(
                 bytes.try_into().map_err(|_| PlanError::SizeOverflow)?,
             )),
         )?[0];
         Ok(self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::ByteOffset { base, offset },
         )?[0])
     }

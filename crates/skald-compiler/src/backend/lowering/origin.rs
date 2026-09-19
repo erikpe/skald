@@ -43,7 +43,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 let metadata_address =
                     self.byte_offset(block, handle, header.dynamic_metadata_offset)?;
                 let metadata = self.builder.append(
-                    self.blocks[block.index()],
+                    self.active_blocks[block.index()],
                     Operation::Load {
                         address: metadata_address,
                         representation: self.address_representation(),
@@ -152,7 +152,7 @@ impl<'plan> Lowerer<'plan, '_> {
         class: crate::identity::ClassId,
     ) -> Result<ValueHandle<'plan>, LowerError> {
         Ok(self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::SymbolAddress {
                 symbol: ArtifactId::Data(DataKey::ClassDispatch(class)),
                 ty: ScalarType::DataAddress,

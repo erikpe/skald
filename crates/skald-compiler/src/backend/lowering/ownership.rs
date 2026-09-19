@@ -215,7 +215,7 @@ impl<'plan> Lowerer<'plan, '_> {
             crate::backend::lir::Terminator::Jump(self.edge(success_target)),
         )?;
         self.builder.terminate(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             crate::backend::lir::Terminator::Branch {
                 condition,
                 true_edge: crate::backend::lir::Edge {
@@ -363,7 +363,7 @@ impl<'plan> Lowerer<'plan, '_> {
         Ok(())
     }
 
-    fn call_owner_helper_at(
+    pub(super) fn call_owner_helper_at(
         &mut self,
         block: crate::backend::lir::BlockHandle<'plan>,
         family: HelperFamily,
@@ -408,7 +408,7 @@ impl<'plan> Lowerer<'plan, '_> {
         })
     }
 
-    fn load_place(
+    pub(super) fn load_place(
         &mut self,
         block: BlockId,
         place: &MirPlace,
@@ -423,7 +423,7 @@ impl<'plan> Lowerer<'plan, '_> {
         )?[0])
     }
 
-    fn store_place(
+    pub(super) fn store_place(
         &mut self,
         block: BlockId,
         place: &MirPlace,
@@ -531,7 +531,9 @@ impl<'plan> Lowerer<'plan, '_> {
             crate::backend::lir::BlockHandle<'plan>,
         >,
     ) -> Result<Vec<crate::backend::lir::ValueHandle<'plan>>, LowerError> {
-        Ok(self.builder.append(self.blocks[block.index()], operation)?)
+        Ok(self
+            .builder
+            .append(self.active_blocks[block.index()], operation)?)
     }
 }
 

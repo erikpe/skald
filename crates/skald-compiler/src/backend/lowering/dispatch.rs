@@ -32,7 +32,7 @@ impl<'plan> Lowerer<'plan, '_> {
             alignment: self.plan().profile().data_layout.pointer_alignment,
         };
         let target = self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Load {
                 address,
                 representation,
@@ -51,11 +51,11 @@ impl<'plan> Lowerer<'plan, '_> {
         let metadata = self.object_origin(block, &source.origin)?.metadata;
         let membership = self.membership(block, metadata, target)?;
         let false_value = self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Constant(Constant::Bool(false)),
         )?[0];
         self.builder.append_into(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Binary {
                 operation: BinaryOperation::Or,
                 left: membership,
@@ -106,7 +106,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .terminate(bind, Terminator::Jump(self.edge(success_target)))?;
         self.bind_origin(binding.destination, origin)?;
         self.builder.terminate(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Terminator::Branch {
                 condition,
                 true_edge: Edge {
@@ -147,7 +147,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 .collect::<Vec<_>>();
             for symbol in symbols {
                 let expected = self.builder.append(
-                    self.blocks[block.index()],
+                    self.active_blocks[block.index()],
                     Operation::SymbolAddress {
                         symbol: ArtifactId::Data(symbol),
                         ty: ScalarType::DataAddress,
@@ -155,7 +155,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 )?[0];
                 matches.push(
                     self.builder.append(
-                        self.blocks[block.index()],
+                        self.active_blocks[block.index()],
                         Operation::Compare {
                             predicate: PrimitiveComparisonPredicate::Equal,
                             left: metadata,
@@ -167,13 +167,13 @@ impl<'plan> Lowerer<'plan, '_> {
         }
         let Some(mut result) = matches.pop() else {
             return Ok(self.builder.append(
-                self.blocks[block.index()],
+                self.active_blocks[block.index()],
                 Operation::Constant(Constant::Bool(false)),
             )?[0]);
         };
         while let Some(value) = matches.pop() {
             result = self.builder.append(
-                self.blocks[block.index()],
+                self.active_blocks[block.index()],
                 Operation::Binary {
                     operation: BinaryOperation::Or,
                     left: result,

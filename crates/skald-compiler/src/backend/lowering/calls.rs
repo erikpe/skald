@@ -44,7 +44,7 @@ impl<'plan> Lowerer<'plan, '_> {
         if let Some(storage) = source.shared_result {
             let produced = self
                 .builder
-                .append(self.blocks[block.index()], Operation::Call(call))?;
+                .append(self.active_blocks[block.index()], Operation::Call(call))?;
             let [value] = produced.as_slice() else {
                 return Err(PlanError::InvalidSignature.into());
             };
@@ -56,7 +56,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 .map(|value| self.values[value.index()])
                 .collect::<Vec<_>>();
             self.builder.append_into(
-                self.blocks[block.index()],
+                self.active_blocks[block.index()],
                 Operation::Call(call),
                 &results,
             )?;
@@ -173,7 +173,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .collect::<Vec<_>>();
         let destination = self.place_address(block, &source.destination)?;
         let metadata = self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::SymbolAddress {
                 symbol: ArtifactId::Data(DataKey::ClassDispatch(source.target.class())),
                 ty: ScalarType::DataAddress,
@@ -192,7 +192,7 @@ impl<'plan> Lowerer<'plan, '_> {
             .collect::<Result<Vec<_>, LowerError>>()?;
         let attribution = self.attribution(block, source.span, false)?;
         self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Call(Call {
                 target: CallTarget::Direct(artifact),
                 signature,
@@ -325,7 +325,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let address = self.address(block, storage)?;
         let representation = self.representation(storage)?;
         Ok(self.builder.append(
-            self.blocks[block.index()],
+            self.active_blocks[block.index()],
             Operation::Load {
                 address,
                 representation,
