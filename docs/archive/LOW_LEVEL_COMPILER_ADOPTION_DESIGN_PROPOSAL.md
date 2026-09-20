@@ -1,19 +1,20 @@
 # Low-Level Compiler Consolidation and Adoption Design Proposal
 
-Status: proposed, 2026-09-20. This proposal is the focused LA05 design under
-the accepted
-[low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+Status: accepted, frozen, promoted, and archived, 2026-09-20. Accepted from the
+proposal committed as `b7c838fa`. This is the focused LA05 design under the
+accepted
+[low-level compiler architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Source assessment: `0c56a9f9`, after complete private lowering parity and the
-placement-checking scalability correction. If accepted, freeze this document
-before creating its implementation roadmap.
+placement-checking scalability correction. Implementation is planned by the
+[consolidation and adoption roadmap](../roadmaps/LOW_LEVEL_COMPILER_ADOPTION_ROADMAP.md).
 
 Inherited contracts are frozen by the archived
-[phase architecture](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
-[LIR model](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md),
-[target selection and physical realization](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md),
-and [complete lowering migration](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+[phase architecture](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
+[LIR model](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md),
+[target selection and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md),
+and [complete lowering migration](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 designs. The maintained
-[migration coverage record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
+[migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
 authoritative handoff for operation coverage, retained transition artifacts,
 observations, and unresolved cost evidence.
 
@@ -88,7 +89,7 @@ boundary is equivalent native behavior, ABI and runtime contracts, exact
 artifact policy, stable diagnostics categories, and deterministic output within
 each supported configuration.
 
-## Proposed production architecture
+## Accepted production architecture
 
 ```mermaid
 flowchart LR

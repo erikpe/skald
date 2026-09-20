@@ -25,6 +25,7 @@ For current information, use:
 
 Archived plans:
 
+- [Low-level compiler consolidation and adoption frozen design](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md)
 - [Placement checking scalability frozen design](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md)
 - [Placement checking scalability](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md)
 - [Complete low-level lowering migration resolved discoveries](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md)
