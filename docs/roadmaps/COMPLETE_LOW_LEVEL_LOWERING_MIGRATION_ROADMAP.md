@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM14 are complete and LM15 is next.
+Status: active; LM01–LM15 are complete and LM16 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -52,7 +52,7 @@ per-callable or per-operation fallback.
 - [x] LM12 — Lower array storage, construction, positions and anchors
 - [x] LM13 — Lower array element lifecycle and generated helper families
 - [x] LM14 — Lower indexed construction, slices and array aliases
-- [ ] LM15 — Lower strings, literal data and standard I/O
+- [x] LM15 — Lower strings, literal data and standard I/O
 - [ ] LM16 — Lower static lifecycle and complete entry orchestration
 - [ ] LM17 — Complete trace, data and artifact closure parity
 - [ ] LM18 — Reconcile exhaustive private parity and measurements
@@ -522,19 +522,30 @@ failure, replacement-alias and native execution tests cover the checkpoint.
 **Purpose:** migrate remaining runtime-service and byte-buffer behavior using the
 completed owner/array foundations.
 
-- [ ] Lower immortal shared string initialization and canonical pooled literal/
+- [x] Lower immortal shared string initialization and canonical pooled literal/
   empty backing data without dynamic retain/free.
-- [ ] Lower standard handle, open, read, write and close calls with ordered
+- [x] Lower standard handle, open, read, write and close calls with ordered
   arguments, exact symbols and anchored byte buffers.
-- [ ] Preserve partial transfers, capacity/offset checks, source panic slices and
+- [x] Preserve partial transfers, capacity/offset checks, source panic slices and
   runtime failure attribution.
-- [ ] Publish literal/runtime data and relocations through typed program closure.
+- [x] Publish literal/runtime data and relocations through typed program closure.
 
 **Tests:** binary/partial I/O, closed descriptors, invalid progress, allocation
 failure, literal identity/empty backing, string panic bytes and trace variants.
 
 **Exit criteria:** all string/I/O operations and literal/runtime data execute and
 close through the new pipeline.
+
+Completed on 2026-09-20. Planning now freezes the checked string descriptor
+shape and maps every retained literal identity to a deterministic canonical
+backing, including one valid zero-length backing. Shared lowering initializes
+immortal descriptors without ownership traffic, extracts source-panic slices
+with source attribution, and lowers all five I/O services with ordered runtime
+roles, anchored array storage and exact remaining ranges. Typed data closure
+publishes canonical bytes and descriptor relocations; the physical renderer
+uses relocation-safe read-only storage and omits empty assembler directives.
+Focused LIR and native tests cover pooled and empty literals, every I/O service,
+partial binary writes, closed descriptors, panic bytes and both trace policies.
 
 ### LM16 — Lower static lifecycle and complete entry orchestration
 

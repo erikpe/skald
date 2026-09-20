@@ -12,6 +12,7 @@ mod failure;
 mod generated;
 mod generated_array;
 mod generated_ownership;
+mod io;
 mod lifecycle;
 mod memory;
 mod numeric;
@@ -22,6 +23,7 @@ mod origin;
 mod ownership;
 mod place;
 mod scalar;
+mod strings;
 mod trace;
 mod worklist;
 

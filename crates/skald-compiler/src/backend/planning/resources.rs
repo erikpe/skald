@@ -1368,8 +1368,18 @@ fn declare_literals(
             _ => None,
         })
         .collect::<BTreeSet<_>>();
-    for literal in program.literal_data.iter() {
-        if input.reachable_artifacts_only() && !reachable.contains(&literal.id) {
+    let retained = program
+        .literal_data
+        .iter()
+        .filter(|literal| !input.reachable_artifacts_only() || reachable.contains(&literal.id));
+    let mut pooled = BTreeMap::<Vec<u8>, crate::identity::LiteralDataId>::new();
+    for literal in retained {
+        let canonical = *pooled.entry(literal.bytes.clone()).or_insert(literal.id);
+        facts.resources.literal_backings.push(LiteralBackingFact {
+            literal: literal.id,
+            canonical,
+        });
+        if canonical != literal.id {
             continue;
         }
         let descriptor = ArtifactId::Data(DataKey::ArrayDescriptor(literal.array));

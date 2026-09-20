@@ -73,6 +73,17 @@ pub(in crate::backend) struct SharedAllocationLayout {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct StringLayoutFact {
+    pub class: ClassId,
+    pub storage_field: FieldId,
+    pub start_field: FieldId,
+    pub length_field: FieldId,
+    pub hash_code_field: FieldId,
+    pub storage_array: ArrayTypeId,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) struct BaseLayoutFact {
     pub class: ClassId,
     pub offset: usize,
@@ -329,6 +340,7 @@ pub(in crate::backend) struct ClassDispatchFact {
 pub(in crate::backend) struct SemanticFacts {
     pub types: Vec<TypeLayoutBinding>,
     pub shared_header: Option<SharedHeaderLayout>,
+    pub string: Option<StringLayoutFact>,
     pub classes: Vec<ClassLayoutFact>,
     pub optionals: Vec<OptionalLayoutFact>,
     pub optional_boxes: Vec<OptionalBoxLayoutFact>,

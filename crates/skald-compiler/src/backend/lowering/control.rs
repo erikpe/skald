@@ -25,6 +25,9 @@ impl<'plan> Lowerer<'plan, '_> {
         terminator: &MirTerminator,
     ) -> Result<(), LowerError> {
         let terminator = match terminator {
+            MirTerminator::Panic { message, span } => {
+                self.report_dynamic_failure(block, message, *span)?
+            }
             MirTerminator::Return { value, .. } => {
                 self.pop_trace(block)?;
                 Terminator::Return(value.iter().map(|v| self.values[v.index()]).collect())

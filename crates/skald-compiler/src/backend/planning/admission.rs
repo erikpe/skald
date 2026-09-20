@@ -247,6 +247,12 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     }
                     MirInstruction::SharedPublish(_) | MirInstruction::SharedAdopt(_) => {}
                     MirInstruction::SharedStatic(_) => {}
+                    MirInstruction::StringInitialize(initialize) => {
+                        place(&initialize.destination, owner)?;
+                        if program.literal_data.get(initialize.data).is_none() {
+                            return Err(unsupported(owner, "undeclared string literal backing"));
+                        }
+                    }
                     MirInstruction::SharedCopy(_) | MirInstruction::SharedMove(_) => {}
                     MirInstruction::SharedFieldCopy(copy) => place(&copy.source, owner)?,
                     MirInstruction::SharedCast(cast) if supported_shared_cast(program, cast) => {
@@ -360,6 +366,8 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                     MirInstruction::EndOptionalBoxView(_) => {}
                     MirInstruction::Array(operation)
                         if supported_array_instruction(program, operation) => {}
+                    MirInstruction::Io(operation)
+                        if supported_io_instruction(program, operation, owner)? => {}
                     other => {
                         return Err(unsupported(
                             owner,
@@ -369,6 +377,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 }
             }
             match block.terminator.as_ref().expect("verified terminator") {
+                MirTerminator::Panic { message, .. } => place(message, owner)?,
                 MirTerminator::Return { .. }
                 | MirTerminator::Goto { .. }
                 | MirTerminator::Branch { .. }
@@ -441,6 +450,21 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     Ok(())
 }
 
+fn supported_io_instruction(
+    program: &MirProgram,
+    instruction: &MirIoInstruction,
+    owner: Option<CallableId>,
+) -> Result<bool, AdmissionError> {
+    let buffer = match &instruction.operation {
+        MirIoOperation::StandardHandle { .. } | MirIoOperation::Close { .. } => return Ok(true),
+        MirIoOperation::Open { path, .. } => path,
+        MirIoOperation::Read { destination, .. } => destination,
+        MirIoOperation::Write { source, .. } => source,
+    };
+    place(&buffer.place, owner)?;
+    Ok(supported_array(program, buffer.array))
+}
+
 fn supported_cleanup(program: &MirProgram, root: crate::identity::ClassId) -> bool {
     let mut pending = vec![root];
     let mut seen = std::collections::BTreeSet::new();
@@ -465,6 +489,12 @@ fn supported_cleanup(program: &MirProgram, root: crate::identity::ClassId) -> bo
                 }
                 MirDestructionStep::OptionalField { optional, .. }
                     if supported_optional(program, optional) => {}
+                MirDestructionStep::ArrayField(field) => {
+                    match program.field(field).map(|field| field.ty) {
+                        Some(MirType::Array(array)) if supported_array(program, array) => {}
+                        _ => return false,
+                    }
+                }
                 MirDestructionStep::Base(base) => pending.push(base),
                 MirDestructionStep::Field(field) => match program
                     .class(field.class())

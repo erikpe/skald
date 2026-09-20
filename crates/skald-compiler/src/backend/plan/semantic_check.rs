@@ -15,8 +15,52 @@ pub(super) fn check(facts: &PlanFacts) -> Result<(), PlanError> {
     check_classes(facts)?;
     check_optionals(facts)?;
     check_arrays(facts)?;
+    check_string(facts)?;
     check_optional_boxes(facts)?;
     check_dispatch(facts)
+}
+
+fn check_string(facts: &PlanFacts) -> Result<(), PlanError> {
+    let Some(string) = facts.semantic.string else {
+        return Ok(());
+    };
+    if facts.semantic.class(string.class).is_none()
+        || facts
+            .semantic
+            .array(string.storage_array)
+            .is_none_or(|array| array.element != SemanticType::U8)
+        || facts
+            .semantic
+            .field(string.storage_field)
+            .is_none_or(|field| {
+                field.ty != SemanticType::Shared(SharedTarget::Array(string.storage_array))
+            })
+        || facts
+            .semantic
+            .field(string.start_field)
+            .is_none_or(|field| field.ty != SemanticType::I64)
+        || facts
+            .semantic
+            .field(string.length_field)
+            .is_none_or(|field| field.ty != SemanticType::U64)
+    {
+        return Err(PlanError::InvalidDomain);
+    }
+    let hash = facts
+        .semantic
+        .field(string.hash_code_field)
+        .ok_or(PlanError::InvalidDomain)?;
+    let SemanticType::Optional(optional) = hash.ty else {
+        return Err(PlanError::InvalidDomain);
+    };
+    if facts
+        .semantic
+        .optional(optional)
+        .is_none_or(|fact| fact.payload != SemanticType::U64 || fact.state_offset.is_none())
+    {
+        return Err(PlanError::InvalidDomain);
+    }
+    Ok(())
 }
 
 fn layout(facts: &PlanFacts, id: LayoutId) -> Result<LayoutFact, PlanError> {

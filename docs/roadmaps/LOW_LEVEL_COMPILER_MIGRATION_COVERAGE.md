@@ -128,20 +128,20 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `Cleanup`, `EndFullExpression` | `lower/cleanup.rs`, `lower/copy.rs` | Destruction plan and recorded reverse completion order; preserve already-computed result | E06 | — | Delivered by LM07 for complete classes; wrapper/container cleanup remains with its owning family |
 | `BindCheckedView`, `EndCheckedView` | `lower/type_operations.rs`, `lower.rs` | Materialize static/complete/metadata components; current end is a verified lifetime no-op | E12 | — | Delivered by LM06 |
 | `SharedAllocate`, `SharedInitialize`, `SharedPublish` | `lower/ownership.rs`, `lower/call.rs` | Checked allocation, unpublished payload, selected constructor/copy and publish after completion | E07, E08 | — | Delivered by LM08 for class allocations and LM11 for optional boxes |
-| `SharedStatic` | `lower/strings.rs` | Static/immortal provenance and backing reference; no dynamic retain/free of immortal data | E11 | — | Delivered by LM08; string view initialization remains LM15 |
+| `SharedStatic` | `lower/strings.rs` | Static/immortal provenance and backing reference; no dynamic retain/free of immortal data | E11 | — | Delivered by LM08; string descriptor publication delivered by LM15 |
 | `SharedAdopt`, `SharedMove` | `lower/ownership.rs` | Transfer owner exactly once; no extra retain; source disposition preserved | E07 | — | Delivered by LM08 |
 | `SharedCopy`, `SharedFieldCopy` | `lower/ownership.rs`, `lower/ownership/count.rs` | Null/zero invalid-state hard trap, immortal no-op, checked count overflow | E07 | — | Delivered by LM08 |
 | `SharedCast` | `lower/ownership.rs`, `lower/type_operations.rs` | Preserve named-retain versus produced-transfer semantics and selected view metadata | E07, E12 | — | Delivered by LM08 for class/interface/object targets, LM11 for optional-box owners and LM14 for exact array-owner transfers |
 | `SharedRelease` | `lower/ownership.rs`, `lower/ownership/count.rs` | Last-owner graph, finalizer call and free original header; calls/clobbers visible before placement | E07, E08 | G04 closed | Delivered by LM08 |
 | `SharedFieldInitialize`, `SharedFieldReplace` | `lower/ownership.rs` | Initialize or replace edge; retain secured replacement before old-owner release | E07 | — | Delivered by LM08 |
-| `StringInitialize` | `lower/strings.rs`, `literal_data.rs` | Exact byte slice/descriptor with pooled immutable backing and planned initializer shape | E11 | — | LA04 |
+| `StringInitialize` | `lower/strings.rs`, `literal_data.rs` | Exact byte slice/descriptor with pooled immutable backing and planned initializer shape | E11 | — | Delivered by LM15 |
 | `OptionalInitialize`, `OptionalAssign` | `lower/optional/scalar.rs` | Exact primitive presence/payload representation; assignment preserves absence semantics | E08 | — | Delivered by LM10 for primitive tagged optionals |
 | `AggregateOptionalInitialize`, `AggregateOptionalAssign`, `AggregateOptionalPublish`, `AggregateOptionalCleanup` | `lower/optional/aggregate.rs` | Recursive state/payload layout, publish after initialization, conditional cleanup and pin checks | E08 | — | Delivered by LM11 and LM13, including inline-array payload execution |
 | `ClassOptionalInitialize`, `ClassOptionalAssign`, `ClassOptionalPublish`, `ClassOptionalCleanup` | `lower/optional/inline_class.rs` | Aligned inline payload, copy/destruction order, explicit publication state and pinned-mutation behavior | E08 | — | Delivered by LM11 |
 | `EndOptionalView`, `EndOptionalBoxView` | `lower/optional/access.rs` | Real guard decrement under verified guard ownership; not equivalent to `EndCheckedView` | E08 | — | Delivered by LM11 |
 | `OptionalSharedInitialize`, `OptionalSharedAssign`, `OptionalSharedCleanup` | `lower/optional/shared_owner.rs` | Zero-niche absent owner, conditional retain/release and balanced self-assignment | E08 | G04 closed | Delivered by LM10 |
 | `Array` | `lower/array.rs` and siblings | All 29 members below; explicit lifecycle, checks, backing anchors and loops | E09, E10 | — | All storage, lifecycle, indexed construction, slice and alias forms delivered by LM12–LM14 |
-| `Io` | `lower/io.rs` | All five runtime operations below; raw buffer pointers/lengths with anchored owner | E11 | — | LA04 |
+| `Io` | `lower/io.rs` | All five runtime operations below; raw buffer pointers/lengths with anchored owner | E11 | — | Delivered by LM15 |
 
 ## Rvalues, operations and places
 
@@ -205,7 +205,7 @@ handle checked terminators before the basic `lower/terminator.rs` fallback.
 | `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LM11 |
 | `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LM11 |
 | `ArrayPositionCheck`, `ArrayOperationCheck`, `ArrayLoop` | `lower/array.rs` | Valid position/failure relation, selected failure result, forward/reverse counted loop with explicit index state | E09, E10 | — | LA04 |
-| `Panic`, `Terminate` | `lower/terminator.rs` | Exact message/reason/location; ordered reporter, no unwind/extra cleanup | E03, E11, E16 | G05 mode handoff | LA03 scalar failures; LA04 remaining |
+| `Panic`, `Terminate` | `lower/terminator.rs` | Exact message/reason/location; ordered reporter, no unwind/extra cleanup | E03, E11, E16 | G05 mode handoff | Scalar failures delivered by LA03; source-string panic delivered by LM15 |
 
 All `MirTerminationReason` members are migration obligations:
 `ObjectCastFailure`, `OptionalAccessFailure`, `OptionalGuardOverflow`,
@@ -310,8 +310,8 @@ No new runtime service or marker revision is implied by this migration.
 | Required runtime entities: `ClassDispatch`, `VirtualFamily`, `InterfaceRequirement`, `FunctionType`, `ArrayLifecycle`, `OptionalLifecycle`, `OptionalBoxLayout`, `StaticStorage`, `LiteralBacking` | `backend/retained_domain.rs`, `planning.rs` | Checked plan consumes narrow certified queries, never analysis internals or mutable certificates | E15, E17 | LA02 planning contract, LA04 consumption |
 | Class dispatch/interface witnesses, shared-array and optional-box descriptors | `dispatch.rs`, `layout.rs` | Shared plan identities/dependencies, target encoding; stable dense slots with null only for verified-unused selections | E08, E12, E15 | Class dispatch/interface data delivered by LM06; optional-box and array descriptors delivered by LM11–LM14 |
 | Writable static slots, including complete-mode inactive-field fallback | `static_fields.rs` | Certified active domain; fallback only for references in present complete-mode bodies; closure removes dead body/slot together | E14, E15 | LA04 |
-| Immutable literal backings, including empty backing | `literal_data.rs`, `lower/strings.rs` | Canonical byte pooling/provenance and explicit metadata references | E11 | LA04 |
-| Panic-message constants | `lower/terminator.rs::PanicMessagePool` | Exact reason byte strings and reference inventory; source panic also uses ordinary string slice | E03, E11 | LA03/LA04 |
+| Immutable literal backings, including empty backing | `literal_data.rs`, `lower/strings.rs` | Canonical byte pooling/provenance and explicit metadata references | E11 | Delivered by LM15 |
+| Panic-message constants | `lower/terminator.rs::PanicMessagePool` | Exact reason byte strings and reference inventory; source panic also uses ordinary string slice | E03, E11 | Canonical failures delivered by LA03; source panic slices delivered by LM15 |
 | Trace strings, contexts, locations | `runtime_trace/{metadata,names}.rs` | Enabled-only source lookup; canonical retained ordering and pooling | E15, E16 | LA04 |
 | Callable/data references and artifact closure | `artifacts.rs`, `machine.rs` | Current graph follows typed instruction variants and data initializers carrying symbol strings; future references gain typed identities. Roots are exported bodies; external symbols have no generated body. Complete mode skips closure; reachable mode requires it | E15 | LA04, LA05 adoption |
 
@@ -824,7 +824,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Array storage, construction, indexing, positions and anchors | Descriptor/element layouts, strides, bounds and descriptor recipes | Delivered by LM12–LM14 for inline, shared, optional-shared, indexed and slice protocols |
 | Array copy/assignment/destruction, seven universal generated array helpers and the primitive slice-assignment helper | Element lifecycle facts plus canonical recursive helper declarations/dependencies | Six lifecycle families delivered by LM13; range clone and primitive slice assignment delivered by LM14 |
 | Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | Delivered by LM14 |
-| String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | LM15 |
+| String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | Delivered by LM15 |
 | Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | LM16 |
 | Enabled/omitted tracing, TLS, metadata, all data definitions and artifact closure | Owned trace facts, exact initializers/relocations, generated receipts and typed root/dependency sets | LM17 |
 

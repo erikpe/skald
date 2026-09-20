@@ -2,7 +2,7 @@
 
 use std::collections::BTreeSet;
 
-use crate::identity::{ArrayTypeId, ClassId, OptionalBoxTypeId, StaticFieldId};
+use crate::identity::{ArrayTypeId, ClassId, LiteralDataId, OptionalBoxTypeId, StaticFieldId};
 
 use super::{ArtifactCategory, ArtifactId, DataKey, LayoutId, LirCallableId, SemanticType};
 
@@ -96,6 +96,15 @@ pub(in crate::backend) struct TlsFact {
     pub initializers: Vec<DataInitializerFact>,
 }
 
+/// Maps each retained source literal to the one immutable backing object that
+/// owns its bytes. Multiple source identities may deliberately share a backing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct LiteralBackingFact {
+    pub literal: LiteralDataId,
+    pub canonical: LiteralDataId,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum GeneratedAttribution {
@@ -137,6 +146,7 @@ pub(in crate::backend) struct ResourceFacts {
     pub activation: Vec<StaticActivationFact>,
     pub shutdown: Vec<StaticShutdownFact>,
     pub data: Vec<DataFact>,
+    pub literal_backings: Vec<LiteralBackingFact>,
     pub tls: Option<TlsFact>,
     pub generated: Vec<GeneratedCallableFact>,
     pub complete_roots: BTreeSet<ArtifactRootFact>,
@@ -155,11 +165,22 @@ impl ResourceFacts {
             .map(|index| self.statics[index])
     }
 
+    pub(in crate::backend) fn literal_backing(
+        &self,
+        literal: LiteralDataId,
+    ) -> Option<LiteralDataId> {
+        self.literal_backings
+            .binary_search_by_key(&literal, |fact| fact.literal)
+            .ok()
+            .map(|index| self.literal_backings[index].canonical)
+    }
+
     pub(super) fn is_empty(&self) -> bool {
         self.statics.is_empty()
             && self.activation.is_empty()
             && self.shutdown.is_empty()
             && self.data.is_empty()
+            && self.literal_backings.is_empty()
             && self.tls.is_none()
             && self.generated.is_empty()
             && self.complete_roots.is_empty()

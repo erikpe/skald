@@ -146,7 +146,12 @@ impl<'plan> Lowerer<'plan, '_> {
         block: BlockId,
         static_owner: &MirSharedStatic,
     ) -> Result<(), LowerError> {
-        let handle = self.data_address(block, DataKey::Literal(static_owner.data))?;
+        let canonical = self
+            .plan()
+            .resources()
+            .literal_backing(static_owner.data)
+            .ok_or(PlanError::UnknownDeclaration)?;
+        let handle = self.data_address(block, DataKey::Literal(canonical))?;
         self.store(block, static_owner.destination, handle)
     }
 

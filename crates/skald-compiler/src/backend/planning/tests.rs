@@ -287,11 +287,10 @@ fn extern_cells_are_projected_without_changing_public_emission() {
 }
 
 #[test]
-fn normalized_intrinsics_and_user_panic_respect_the_admission_boundary() {
-    for (source, supported) in [
-        ("import std::f64; extern fn input() -> f64; fn main() -> i64 { return (i64) std::f64::from_bits(std::f64::to_bits(input())); }", true),
-        ("import std::io; fn main() -> i64 { std::io::println_i64(1); return 0; }", false),
-        ("import std::error; fn main() -> i64 { std::error::panic(\"failure\"); return 0; }", false),
+fn normalized_intrinsics_and_user_panic_cross_the_admission_boundary() {
+    for source in [
+        "import std::f64; extern fn input() -> f64; fn main() -> i64 { return (i64) std::f64::from_bits(std::f64::to_bits(input())); }",
+        "import std::io; fn main() -> i64 { std::io::println_i64(1); return 0; }",
     ] {
         let (_directory, graph) = crate::test_support::load_module_sources_with_standard_library("app", &[("app.ska", source)]);
         let resolved = crate::resolve::resolve_module_graph(&graph);
@@ -300,10 +299,14 @@ fn normalized_intrinsics_and_user_panic_respect_the_admission_boundary() {
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
         let verified = crate::passes::run_mir_pipeline(program).unwrap();
-        let result = admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only());
-        if supported {result.unwrap();}
-        else {assert!(matches!(result, Err(AdmissionError::Unsupported(_))));}
+        admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
+            .unwrap_or_else(|error| panic!("{source}: {error}"));
     }
+    let fixture = crate::mir::test_fixtures::verified_io_fixture_with_sources(
+        "import std::error; fn main()->i64{std::error::panic(\"failure\");}",
+        "",
+    );
+    admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
 }
 
 #[test]
@@ -416,7 +419,7 @@ fn absent_signatures_preserve_source_identity_despite_equal_physical_cells() {
 }
 
 #[test]
-fn scalar_io_intrinsic_rejects_even_without_lifecycle_dependencies() {
+fn scalar_io_intrinsic_is_admitted_without_lifecycle_dependencies() {
     let (_directory, graph) =
         crate::test_support::load_module_sources_with_standard_library_overrides(
             "app",
@@ -446,13 +449,7 @@ fn scalar_io_intrinsic_rejects_even_without_lifecycle_dependencies() {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
     let verified = crate::passes::run_mir_pipeline(program).unwrap();
-    let Err(AdmissionError::Unsupported(reason)) =
-        admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
-    else {
-        panic!("scalar I/O must reject")
-    };
-    assert!(reason.callable.is_some());
-    assert!(reason.reason.contains("Io"), "{}", reason.reason);
+    admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only()).unwrap();
 }
 
 #[test]

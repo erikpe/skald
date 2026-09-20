@@ -33,9 +33,9 @@ pub(in crate::backend) use identities::{
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use resources::{
     ArtifactRootFact, ArtifactRootReason, DataFact, DataInitializerFact, DataPurpose,
-    GeneratedAttribution, GeneratedCallableFact, ResourceFacts, StaticActivationFact,
-    StaticActivationKind, StaticCleanupFact, StaticShutdownFact, StaticStorageDisposition,
-    StaticStorageFact, TlsFact,
+    GeneratedAttribution, GeneratedCallableFact, LiteralBackingFact, ResourceFacts,
+    StaticActivationFact, StaticActivationKind, StaticCleanupFact, StaticShutdownFact,
+    StaticStorageDisposition, StaticStorageFact, TlsFact,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use semantic::{
@@ -45,7 +45,7 @@ pub(in crate::backend) use semantic::{
     MethodSlotFact, ObjectComponent, ObjectViewFact, ObjectViewTarget, OptionalBoxLayoutFact,
     OptionalLayoutFact, OptionalStorageFact, RequirementImplementationFact, SelectedCopy,
     SemanticFacts, SemanticType, SharedAllocationLayout, SharedHeaderLayout, SharedTarget,
-    TypeLayoutBinding, VirtualFamilyFact,
+    StringLayoutFact, TypeLayoutBinding, VirtualFamilyFact,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use view::{CallableBinding, DeclarationId, PlanView};

@@ -168,8 +168,13 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
         for key in &self.expected {
             text.push_str(&self.store.read(*key)?);
         }
-        text.push_str(".section .rodata\n");
+        let mut data_section = None;
         for data in parent.parent().data().chain(self.context.catalog().data()) {
+            let section = render::data_section(data);
+            if data_section != Some(section) {
+                text.push_str(section);
+                data_section = Some(section);
+            }
             render::data(&mut text, data, &|id| self.symbols.name(id))?;
         }
         text.push_str(".section .note.GNU-stack,\"\",@progbits\n");

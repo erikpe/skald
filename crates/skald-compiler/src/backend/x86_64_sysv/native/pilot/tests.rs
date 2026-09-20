@@ -941,3 +941,79 @@ fn guarded_optional_mutation_reports_the_language_failure() {
     );
     assert!(stderr.contains("native-pilot.ska"), "{stderr}");
 }
+
+#[test]
+fn literal_strings_and_standard_io_execute_through_the_verified_path() {
+    let program = crate::passes::verify_final_mir(
+        crate::mir::test_fixtures::io_program_with_app_and_additional_bodies(
+            concat!(
+                "import std::io; import std::str;",
+                "fn main()->i64{var first:std::str::Str=\"same\";",
+                "var second:std::str::Str=\"same\";var empty:std::str::Str=\"\";",
+                "var bytes:u8[]=u8[]{65u8,0u8,255u8};",
+                "var output:i64=std::io::standard(1u8);",
+                "return std::io::write(output,bytes,1u);}"
+            ),
+            "",
+        ),
+    )
+    .unwrap();
+    let assembly = super::super::compile_native_pilot(
+        crate::backend::BackendInput::without_runtime_trace(&program),
+    )
+    .unwrap();
+    let output = run_native_assembly_with_c_probe(&assembly, "");
+    assert_eq!(output.status.code(), Some(2), "{output:?}");
+    assert_eq!(output.stdout, b"\0\xff");
+    assert!(output.stderr.is_empty(), "{output:?}");
+    assert!(assembly.contains(".section .data.rel.ro.local,\"aw\",@progbits"));
+    assert!(!assembly.contains(".zero 0\n"));
+}
+
+#[test]
+fn standard_io_open_read_and_close_errors_execute_through_the_verified_path() {
+    let program = crate::passes::verify_final_mir(
+        crate::mir::test_fixtures::io_program_with_app_and_additional_bodies(
+            concat!(
+                "import std::io; fn main()->i64{",
+                "var path:u8[]=u8[]{47u8,100u8,101u8,118u8,47u8,110u8,117u8,108u8,108u8};",
+                "var bytes:u8[]=u8[](1u);var handle:i64=std::io::open(path,0u8);",
+                "if(handle<0){return 1;}var closed:i64=std::io::close(handle);",
+                "if(closed<0){return 2;}var result:i64=std::io::read(handle,bytes,0u);",
+                "if(result<0){return 0;}return 3;}"
+            ),
+            "",
+        ),
+    )
+    .unwrap();
+    let assembly = super::super::compile_native_pilot(
+        crate::backend::BackendInput::without_runtime_trace(&program),
+    )
+    .unwrap();
+    let output = run_native_assembly_with_c_probe(&assembly, "");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert!(output.stdout.is_empty(), "{output:?}");
+    assert!(output.stderr.is_empty(), "{output:?}");
+}
+
+#[test]
+fn source_panic_string_bytes_execute_with_both_trace_policies() {
+    let fixture = crate::mir::test_fixtures::verified_io_fixture_with_sources(
+        "import std::error; fn main()->i64{std::error::panic(\"panic bytes\");}",
+        "",
+    );
+    for trace in [RuntimeTracePolicy::Omitted, RuntimeTracePolicy::Enabled] {
+        let assembly = compile(&fixture, trace, false).unwrap();
+        let output = match trace {
+            RuntimeTracePolicy::Omitted => run_native_assembly_with_c_probe(&assembly, ""),
+            RuntimeTracePolicy::Enabled => run_native_assembly_with_runtime_trace_probe(&assembly),
+        };
+        assert!(!output.status.success(), "{output:?}");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains("panic bytes"), "{stderr}");
+        assert_eq!(
+            assembly.contains("ska_rt_trace_top@tpoff"),
+            trace == RuntimeTracePolicy::Enabled
+        );
+    }
+}

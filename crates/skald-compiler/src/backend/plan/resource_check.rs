@@ -19,8 +19,50 @@ pub(super) fn check(
 
     check_statics(facts, callables, artifacts)?;
     check_data(facts, artifacts)?;
+    check_literal_backings(facts, artifacts)?;
     check_generated(facts, callables, artifacts)?;
     check_roots(facts, callables, artifacts)?;
+    Ok(())
+}
+
+fn check_literal_backings(
+    facts: &PlanFacts,
+    artifacts: &BTreeMap<ArtifactId, ArtifactDeclaration>,
+) -> Result<(), PlanError> {
+    if !facts
+        .resources
+        .literal_backings
+        .windows(2)
+        .all(|pair| pair[0].literal < pair[1].literal)
+    {
+        return Err(PlanError::DuplicateDeclaration);
+    }
+    let canonical = facts
+        .resources
+        .literal_backings
+        .iter()
+        .filter_map(|fact| (fact.literal == fact.canonical).then_some(fact.literal))
+        .collect::<BTreeSet<_>>();
+    let supplied = facts
+        .resources
+        .data
+        .iter()
+        .filter_map(|data| match (data.key, data.purpose) {
+            (DataKey::Literal(literal), DataPurpose::LiteralBacking) => Some(literal),
+            _ => None,
+        })
+        .collect::<BTreeSet<_>>();
+    if canonical != supplied {
+        return Err(PlanError::InvalidArtifact);
+    }
+    for backing in &facts.resources.literal_backings {
+        let key = DataKey::Literal(backing.canonical);
+        if !canonical.contains(&backing.canonical)
+            || !artifacts.contains_key(&ArtifactId::Data(key))
+        {
+            return Err(PlanError::UnknownDeclaration);
+        }
+    }
     Ok(())
 }
 

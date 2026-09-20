@@ -106,6 +106,9 @@ impl<'plan> Lowerer<'plan, '_> {
             MirInstruction::SharedStatic(static_owner) => {
                 self.shared_static(block, static_owner)?
             }
+            MirInstruction::StringInitialize(initialize) => {
+                self.string_initialize(block, initialize)?
+            }
             MirInstruction::SharedAdopt(adopt) => self.shared_adopt(block, adopt)?,
             MirInstruction::SharedCopy(copy) => self.shared_copy(block, copy)?,
             MirInstruction::SharedFieldCopy(copy) => self.shared_field_copy(block, copy)?,
@@ -158,7 +161,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirInstruction::EndOptionalView(end) => self.end_optional_view(block, end)?,
             MirInstruction::EndOptionalBoxView(end) => self.end_optional_box_view(block, end)?,
             MirInstruction::Array(instruction) => self.array_instruction(block, instruction)?,
-            _ => return Err(PlanError::InvalidDomain.into()),
+            MirInstruction::Io(instruction) => self.io_instruction(block, instruction)?,
         }
         Ok(())
     }

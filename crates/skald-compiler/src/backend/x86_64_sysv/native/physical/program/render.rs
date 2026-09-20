@@ -57,6 +57,7 @@ pub(super) fn data(
                     out.push('\n');
                 }
             }
+            DataInitializer::Zero(0) => {}
             DataInitializer::Zero(bytes) => writeln!(out, ".zero {bytes}")?,
             DataInitializer::Address { target, addend, .. } => {
                 writeln!(out, ".quad {}{:+}", symbol(*target), addend)?;
@@ -64,6 +65,18 @@ pub(super) fn data(
         }
     }
     Ok(())
+}
+
+pub(super) fn data_section(definition: &DataDefinition) -> &'static str {
+    if definition
+        .initializers
+        .iter()
+        .any(|initializer| matches!(initializer, DataInitializer::Address { .. }))
+    {
+        ".section .data.rel.ro.local,\"aw\",@progbits\n"
+    } else {
+        ".section .rodata\n"
+    }
 }
 
 fn ordinal(key: LirCallableId) -> String {

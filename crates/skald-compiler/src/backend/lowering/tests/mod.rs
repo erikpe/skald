@@ -7,3 +7,4 @@ mod calls;
 mod lifecycle;
 mod optional;
 mod ownership;
+mod strings_io;
