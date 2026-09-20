@@ -45,12 +45,19 @@ fn generated_finalizers_preserve_body_field_base_order_and_close_the_worklist() 
             })
             .collect::<Vec<_>>();
         for call in &calls {
-            assert_eq!(
-                call.attribution,
-                CallAttribution::InheritedOperation {
-                    boundary: LirCallableId::Helper(key)
+            let expected = if matches!(
+                call.target,
+                CallTarget::Direct(ArtifactId::Callable(LirCallableId::Source(_)))
+            ) {
+                CallAttribution::SourceBodyFromOmittedHelper {
+                    boundary: LirCallableId::Helper(key),
                 }
-            );
+            } else {
+                CallAttribution::InheritedOperation {
+                    boundary: LirCallableId::Helper(key),
+                }
+            };
+            assert_eq!(call.attribution, expected);
         }
         if calls.len() == 3 {
             assert!(matches!(

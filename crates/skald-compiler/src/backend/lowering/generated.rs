@@ -648,7 +648,7 @@ fn call_source_destructor<'plan>(
             target: CallTarget::Direct(ArtifactId::Callable(target)),
             signature,
             arguments,
-            attribution: CallAttribution::InheritedOperation { boundary },
+            attribution: CallAttribution::SourceBodyFromOmittedHelper { boundary },
         }),
     )?;
     Ok(())

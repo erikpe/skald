@@ -84,5 +84,10 @@ where
         consume(body)?;
     }
     super::data::define(admitted, &mut worklist).map_err(E::from)?;
+    // Typed data edges can discover generated finalizers after source bodies
+    // have been released. Close those edges through the same ordinary worklist.
+    while let Some(body) = lower_next(admitted, &mut worklist).map_err(E::from)? {
+        consume(body)?;
+    }
     worklist.finish().map_err(LowerError::from).map_err(E::from)
 }

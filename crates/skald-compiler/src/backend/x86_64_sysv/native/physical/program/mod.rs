@@ -7,7 +7,7 @@ mod tests;
 use super::verify::{PhysicalReceipt, VerifiedPhysicalCallable};
 use crate::backend::{
     lir::ProgramError as InventoryError,
-    plan::{ArtifactId, BodyDisposition, LirCallableId, PlanError},
+    plan::{ArtifactId, LirCallableId, PlanError},
     selected::{SelectionContext, VerifiedSelectedProgram},
 };
 use std::{
@@ -100,25 +100,9 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
         store: S,
         external: BTreeMap<crate::identity::ExternalLinkId, String>,
     ) -> Result<Self, ProgramError> {
-        let mut expected = context
-            .catalog()
-            .plan()
-            .callables()
-            .filter(|c| c.body == BodyDisposition::Required)
-            .map(|c| c.key)
-            .collect::<BTreeSet<_>>();
-        expected.extend(
-            context
-                .catalog()
-                .declarations()
-                .filter_map(|d| match d.key {
-                    ArtifactId::Callable(key) => Some(key),
-                    _ => None,
-                }),
-        );
         Ok(Self {
             context,
-            expected,
+            expected: BTreeSet::new(),
             completed: BTreeMap::new(),
             store,
             symbols: Symbols::new(context, external)?,
@@ -134,9 +118,10 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
             return Err(ProgramError::StaleReceipt);
         }
         let key = receipt.parent().key();
-        if !self.expected.contains(&key) {
-            return Err(ProgramError::MissingDefinition(ArtifactId::Callable(key)));
-        }
+        self.context.catalog().artifact(
+            ArtifactId::Callable(key),
+            crate::backend::plan::ArtifactCategory::Callable,
+        )?;
         if self.completed.contains_key(&key) {
             return Err(ProgramError::DuplicateDefinition);
         }
@@ -152,6 +137,7 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
         if !std::ptr::eq(parent.context(), self.context) {
             return Err(PlanError::WrongContext.into());
         }
+        self.expected = parent.receipts().map(|receipt| receipt.key()).collect();
         for key in &self.expected {
             let receipt = self
                 .completed
@@ -162,6 +148,13 @@ impl<'p, S: FragmentStore> PhysicalProgramBuilder<'p, S> {
                 self.context
                     .catalog()
                     .artifact(*reference, reference.category())?;
+            }
+        }
+        for key in self.completed.keys() {
+            if !self.expected.contains(key) {
+                return Err(
+                    InventoryError::UnexpectedDefinition(ArtifactId::Callable(*key)).into(),
+                );
             }
         }
         let mut text = String::from(".intel_syntax noprefix\n.text\n");

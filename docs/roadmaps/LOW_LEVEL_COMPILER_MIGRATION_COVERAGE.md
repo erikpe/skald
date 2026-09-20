@@ -309,11 +309,11 @@ No new runtime service or marker revision is implied by this migration.
 | --- | --- | --- | --- | --- |
 | Required runtime entities: `ClassDispatch`, `VirtualFamily`, `InterfaceRequirement`, `FunctionType`, `ArrayLifecycle`, `OptionalLifecycle`, `OptionalBoxLayout`, `StaticStorage`, `LiteralBacking` | `backend/retained_domain.rs`, `planning.rs` | Checked plan consumes narrow certified queries, never analysis internals or mutable certificates | E15, E17 | LA02 planning contract, LA04 consumption |
 | Class dispatch/interface witnesses, shared-array and optional-box descriptors | `dispatch.rs`, `layout.rs` | Shared plan identities/dependencies, target encoding; stable dense slots with null only for verified-unused selections | E08, E12, E15 | Class dispatch/interface data delivered by LM06; optional-box and array descriptors delivered by LM11–LM14 |
-| Writable static slots, including complete-mode inactive-field fallback | `static_fields.rs` | Certified active domain; fallback only for references in present complete-mode bodies; closure removes dead body/slot together | E14, E15 | LA04 |
+| Writable static slots, including complete-mode inactive-field fallback | `static_fields.rs` | Certified active domain; fallback only for references in present complete-mode bodies; closure removes dead body/slot together | E14, E15 | Delivered by LM16/LM17 |
 | Immutable literal backings, including empty backing | `literal_data.rs`, `lower/strings.rs` | Canonical byte pooling/provenance and explicit metadata references | E11 | Delivered by LM15 |
 | Panic-message constants | `lower/terminator.rs::PanicMessagePool` | Exact reason byte strings and reference inventory; source panic also uses ordinary string slice | E03, E11 | Canonical failures delivered by LA03; source panic slices delivered by LM15 |
-| Trace strings, contexts, locations | `runtime_trace/{metadata,names}.rs` | Enabled-only source lookup; canonical retained ordering and pooling | E15, E16 | LA04 |
-| Callable/data references and artifact closure | `artifacts.rs`, `machine.rs` | Current graph follows typed instruction variants and data initializers carrying symbol strings; future references gain typed identities. Roots are exported bodies; external symbols have no generated body. Complete mode skips closure; reachable mode requires it | E15 | LA04, LA05 adoption |
+| Trace strings, contexts, locations | `runtime_trace/{metadata,names}.rs` | Enabled-only source lookup; canonical retained ordering and pooling | E15, E16 | Delivered by LM17 |
+| Callable/data references and artifact closure | `artifacts.rs`, `machine.rs` | Typed policy roots and verified callable/data edges determine exact closure after body release; rendered symbols are never graph inputs | E15 | Delivered privately by LM17; LA05 adoption remains |
 
 Dense declarations/layout planning are not executable-body authority. The current
 backend deliberately constructs some helper/table families from complete type
@@ -326,10 +326,10 @@ equivalence evidence; it is not a hidden prerequisite for LA01.
 
 | Current responsibility | Current owner/evidence | Planned handoff and required check | Delivery (pending) |
 | --- | --- | --- | --- |
-| Source visibility, frame eligibility and initial location | `runtime_trace/activation.rs`, E16 | Shared checked plan/lowering; only eligible source bodies push; helpers inherit outer attribution | LA04 |
-| Push/pop, call-site replacement, reporting-edge replacement | `runtime_trace/instrumentation.rs`, E16 | Shared ordered trace actions; selection expands explicit TLS/address operations, temporaries and clobbers before placement | LA02 action schema, LA03 pilot, LA04 full |
-| Omitted tracing | Facade sources isolation and metadata early omission, E17/E16 | No action/record/lookup/metadata/TLS references; report selection cannot alter policy | Preparation guards, LA04 parity |
-| Call attribution: `SourceOperation`, `InheritedSourceOperation`, `SourceBodyFromOmittedHelper`, `NonReporting`, `HardDefectOnly`, `ProcessBoundary` | `lower/call/emission.rs`, E16 | Preserve attribution in lowered calls/actions. Current constructor audits it but discards the enum; do not treat physical `Call` as carrying that evidence today | LA02 metadata, LA04 lowering |
+| Source visibility, frame eligibility and initial location | `runtime_trace/activation.rs`, E16 | Shared checked plan/lowering; only eligible source bodies push; helpers inherit outer attribution | Delivered by LM17 |
+| Push/pop, call-site replacement, reporting-edge replacement | `runtime_trace/instrumentation.rs`, E16 | Shared ordered trace actions; selection expands explicit TLS/address operations, temporaries and clobbers before placement | Delivered by LA02/LA03 and completed by LM17 |
+| Omitted tracing | Facade sources isolation and metadata early omission, E17/E16 | No action/record/lookup/metadata/TLS references; report selection cannot alter policy | Delivered by LM17 |
+| Call attribution: `SourceOperation`, `InheritedSourceOperation`, `SourceBodyFromOmittedHelper`, `NonReporting`, `HardDefectOnly`, `ProcessBoundary` | `lower/call/emission.rs`, E16 | Preserve all six meanings through lowered and selected calls; generated source-body entries remain distinct from helper inheritance | Delivered by LM17 |
 | Backend planning visits | `planning.rs`, E15/E14 | Current callable phases: `ArrayLegality`, `Legality`, `RuntimeTraceActivation`, `Frame`, `InstructionSelection`; static phases: `Declared`, `Active`, `Initializer`, `Finalizer`, `ConservativeFallback`, `Retained`, `Emitted`. Future phase-local observers preserve exact domains without driving semantics | LA02/LA03 interfaces, LA05 observations |
 | Request-local reporting and dump inspection | `reporting`, driver orchestration, E18; private verified checkpoint adapters, E22 | Phase-owned lowered/selected/physical/placement/frame dumps stream only when privately requested; quiet mode has no renderer and observation failure prevents publication. LA05 must add typed public events/adapters and requested-only metrics without fabricated events or timings in deterministic output | LA03 private adapters complete; LA05 production |
 | Source diagnostics and driver failure categories | Driver/reporting contract, E18 | Source errors remain frontend-owned; structured backend errors retain target/callable context; no error hidden by filtering or fallback | LA03/LA04 integration |
@@ -827,7 +827,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | Delivered by LM14 |
 | String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | Delivered by LM15 |
 | Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | Delivered by LM16 |
-| Enabled/omitted tracing, TLS, metadata, all data definitions and artifact closure | Owned trace facts, exact initializers/relocations, generated receipts and typed root/dependency sets | LM17 |
+| Enabled/omitted tracing, TLS, metadata, all data definitions and artifact closure | Owned trace facts, exact initializers/relocations, generated receipts and typed root/dependency sets | Delivered by LM17 |
 
 The combined plan regression exercises an aggregate hidden result, all three
 receiver components, mutually recursive generated helpers and retained-inactive

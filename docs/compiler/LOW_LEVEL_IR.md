@@ -443,13 +443,14 @@ their upstream or target owners. No native emitter consumes these products yet.
 
 ## Program inventories and target declarations
 
-`ProgramBuilder` starts from the immutable checked declaration catalog. All
-required source/generated bodies remain construction roots, including unused
-complete-mode helpers; absent sources cannot be requested or built. `next`
-chooses canonically. Discovery can request an already reserved helper, including
-one currently building, without recursively constructing it. `begin` rejects
-reentry and completed definitions. A verified state contains its receipt, so
-completion state cannot diverge from its witness.
+`ProgramBuilder` starts from the immutable checked declaration catalog. Complete
+mode reserves every required source and generated body. Reachable mode reserves
+only typed callable roots, then discovers further bodies from verified callable
+receipts and data relocations. Absent sources cannot be requested or built.
+`next` chooses canonically. Discovery can request an already reserved helper,
+including one currently building, without recursively constructing it. `begin`
+rejects reentry and completed definitions. A verified state contains its receipt,
+so completion state cannot diverge from its witness.
 
 `complete` checks the chosen verified body and supplied receipt against the live
 parent and exact snapshot before recording completion. Bodies may then be
@@ -459,7 +460,9 @@ input bodies. `finish` consumes construction state and checks all required
 bodies and data definitions before producing `VerifiedProgram`. Consumers use
 `require_input` to reconcile a chosen input witness; receipts from replacements,
 other callables, other live contexts or other targets cannot substitute. Consuming
-edits invalidate and republish program authority.
+edits invalidate and republish program authority. Final closure walks typed
+roots, receipt references and data relocations, rejecting missing or
+over-materialized callable/data definitions without inspecting rendered symbols.
 
 Data definitions explicitly contain byte, zero-fill and typed address
 initializers. Their checked total width must exactly match the declared extent.
@@ -468,8 +471,8 @@ must fit the referenced extent (including a one-past address); code/TLS addends
 are zero. Forward and cyclic data references require prior declarations, not
 initializer construction order. Intrinsic failure bytes must match the shared
 message catalog. Active statics require definitions in both artifact policies;
-inactive complete-mode static declarations remain inspectable and cannot be
-initialized or referenced. Runtime/external declarations and authorized null
+retained-inactive complete-mode statics are exact checked zero data and can only
+be referenced by retained complete-mode bodies. Runtime/external declarations and authorized null
 dispatch slots require no fabricated body.
 
 `TargetDeclarations` borrows the immutable checked plan, not a finalized lower
@@ -487,7 +490,10 @@ may be released after registering downstream completion. Local checking confirms
 plan and owner; final program closure confirms the chosen executable snapshot.
 Discovery-pass receipts cannot certify fresh executable-pass bodies.
 
-`SelectedProgramBuilder` reserves required plan bodies and frozen target thunks.
+`SelectedProgramBuilder` reserves frozen target thunks and accepts streamed
+selections. At closure it derives its exact source/helper inventory from the
+finalized lower program, so reachable-mode bodies omitted upstream cannot be
+resurrected downstream.
 `finish` consumes its state and requires a finalized `VerifiedProgram` from the
 same plan. It checks all required selected completions and reconciles every source
 input witness with the lower program's chosen receipt. Same IDs or equal body

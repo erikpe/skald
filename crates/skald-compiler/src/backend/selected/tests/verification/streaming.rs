@@ -37,6 +37,44 @@ fn callable_storage_is_released_before_either_program_closes() {
 }
 
 #[test]
+fn selected_closure_rejects_a_locally_valid_body_pruned_by_its_lower_parent() {
+    let mut f = facts();
+    f.artifact_policy = plan::ArtifactPolicy::Reachable;
+    for index in 0..2 {
+        f.resources.complete_roots.insert(plan::ArtifactRootFact {
+            artifact: ArtifactId::Callable(source(index)),
+            reason: plan::ArtifactRootReason::CompleteDefinition,
+        });
+    }
+    f.resources.reachable_roots.insert(plan::ArtifactRootFact {
+        artifact: ArtifactId::Callable(source(0)),
+        reason: plan::ArtifactRootReason::CompleteDefinition,
+    });
+    let plan = CheckedPlan::check(f).unwrap();
+    let catalog = lir::TargetDeclarations::new(plan.view()).freeze().unwrap();
+    let (resources, views, _) = resources();
+    let ctx = context(&catalog, resources, vec![]);
+    let retained = lower(&plan, source(0));
+    let pruned = lower(&plan, source(1));
+    let mut lowered = lir::ProgramBuilder::new(plan.view());
+    lowered.begin(source(0)).unwrap();
+    lowered.complete(&retained, &retained.receipt()).unwrap();
+    let parent = lowered.finish().unwrap();
+
+    let mut selected = SelectedProgramBuilder::new(&ctx);
+    for body in [&retained, &pruned] {
+        let product = select(&ctx, body, &views);
+        selected.complete(&product, &product.receipt()).unwrap();
+    }
+    assert_eq!(
+        selected.finish(&parent).err(),
+        Some(lir::ProgramError::UnexpectedDefinition(
+            ArtifactId::Callable(source(1))
+        ))
+    );
+}
+
+#[test]
 fn discovery_snapshots_cannot_certify_the_executable_pass() {
     let plan = CheckedPlan::check(facts()).unwrap();
     let catalog = lir::TargetDeclarations::new(plan.view()).freeze().unwrap();

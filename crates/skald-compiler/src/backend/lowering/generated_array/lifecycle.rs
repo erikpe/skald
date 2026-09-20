@@ -973,7 +973,7 @@ impl<'plan> Emitter<'plan> {
                 target: CallTarget::Direct(ArtifactId::Callable(target)),
                 signature: binding.signature_id(),
                 arguments,
-                attribution: CallAttribution::InheritedOperation {
+                attribution: CallAttribution::SourceBodyFromOmittedHelper {
                     boundary: self.boundary,
                 },
             }),

@@ -54,7 +54,7 @@ per-callable or per-operation fallback.
 - [x] LM14 — Lower indexed construction, slices and array aliases
 - [x] LM15 — Lower strings, literal data and standard I/O
 - [x] LM16 — Lower static lifecycle and complete entry orchestration
-- [ ] LM17 — Complete trace, data and artifact closure parity
+- [x] LM17 — Complete trace, data and artifact closure parity
 - [ ] LM18 — Reconcile exhaustive private parity and measurements
 - [ ] LM19 — Cumulative review, cleanup and LA05 handoff
 
@@ -586,13 +586,13 @@ coordinator frames from source traces.
 **Purpose:** close cross-cutting observation and publication obligations after
 all executable families exist.
 
-- [ ] Cover every call-attribution category, source-frame eligibility, initial/
+- [x] Cover every call-attribution category, source-frame eligibility, initial/
   call/failure locations, inherited helpers and push/pop balance.
-- [ ] Prove omitted mode performs no source lookup and publishes no trace action,
+- [x] Prove omitted mode performs no source lookup and publishes no trace action,
   object, metadata, TLS artifact or relocation.
-- [ ] Reconcile every callable/data/helper/static/descriptor root and typed edge
+- [x] Reconcile every callable/data/helper/static/descriptor root and typed edge
   in complete and reachable modes after body release.
-- [ ] Preserve structured phase/callable/origin errors and deterministic private
+- [x] Preserve structured phase/callable/origin errors and deterministic private
   requested checkpoints without exposing public driver adapters.
 
 **Tests:** enabled/omitted trace matrix, sparse/complete closure, missing/extra
@@ -601,6 +601,23 @@ determinism and no-lookup probes.
 
 **Exit criteria:** trace and artifact policy can no longer distinguish a missing
 feature family; all private checkpoints are complete and deterministic.
+
+Completed on 2026-09-20. Generated finalizers and array lifecycle helpers now
+distinguish entry into a source-authored body from ordinary inherited helper
+calls, completing the six-category attribution contract while retaining the
+existing checked frame/location and push/pop rules. Omitted tracing continues to
+admit and lower without a source provider and produces no actions, record object,
+metadata, TLS reference or relocation.
+
+Lowered program closure now walks typed policy roots, verified receipt edges and
+data relocations. Complete mode retains the full required catalog; reachable
+mode constructs only rooted bodies and helpers discovered transitively from
+callable or data edges, including helpers first discovered after predecessor
+bodies have been released. Selected and physical closure derive their exact
+inventories from their finalized parents, preventing a later phase from
+resurrecting pruned definitions. Existing structured verifier/program errors,
+terminal writer failures and independently deterministic private checkpoints
+cover the observation boundary without adding a public adapter.
 
 ### LM18 — Reconcile exhaustive private parity and measurements
 

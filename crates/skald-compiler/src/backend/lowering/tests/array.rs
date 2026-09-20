@@ -1,9 +1,9 @@
 use crate::{
     backend::{
         failure::FailureMessage,
-        lir::{Operation, Terminator},
+        lir::{CallAttribution, CallTarget, Operation, Terminator},
         lowering::lower_program,
-        plan::{HelperFamily, LirCallableId},
+        plan::{ArtifactId, HelperFamily, LirCallableId},
         planning::admit,
         BackendInput,
     },
@@ -40,10 +40,7 @@ fn primitive_array_storage_positions_and_loops_lower_as_checked_lir() {
         Ok(())
     })
     .unwrap();
-    assert_eq!(
-        program.receipts().count(),
-        admitted.plan().view().callables().count()
-    );
+    assert!(program.receipts().count() < admitted.plan().view().callables().count());
     assert!(addressed_element && checked_control_flow && corrupt_count_traps);
 }
 
@@ -65,10 +62,7 @@ fn shared_and_optional_shared_primitive_arrays_close_the_owner_worklist() {
         admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
             .unwrap();
     let program = lower_program(&admitted, |_| Ok(())).unwrap();
-    assert_eq!(
-        program.receipts().count(),
-        admitted.plan().view().callables().count()
-    );
+    assert!(program.receipts().count() < admitted.plan().view().callables().count());
     let families = program
         .receipts()
         .filter_map(|(_, receipt)| match receipt.owner().key() {
@@ -77,15 +71,15 @@ fn shared_and_optional_shared_primitive_arrays_close_the_owner_worklist() {
         })
         .collect::<std::collections::BTreeSet<_>>();
     for family in [
-        HelperFamily::ArrayElementInitializer,
-        HelperFamily::ArrayElementCopier,
-        HelperFamily::ArrayClone,
-        HelperFamily::ArraySliceClone,
         HelperFamily::ArrayElementDestroyer,
-        HelperFamily::ArrayRelease,
         HelperFamily::ArraySharedFinalizer,
+        HelperFamily::Retain,
+        HelperFamily::Release,
     ] {
-        assert!(families.contains(&family));
+        assert!(
+            families.contains(&family),
+            "missing {family:?}: {families:?}"
+        );
     }
 }
 
@@ -141,15 +135,43 @@ fn nontrivial_element_lifecycle_closes_generated_array_and_class_helpers() {
     ] {
         let admitted =
             admit(input).expect("all concrete inline array lifecycle cells are admitted");
-        let program = lower_program(&admitted, |_| Ok(())).unwrap();
-        assert_eq!(
-            program.receipts().count(),
-            admitted.plan().view().callables().count()
-        );
+        let mut source_body_from_helper = false;
+        let program = lower_program(&admitted, |body| {
+            if matches!(body.receipt().owner().key(), LirCallableId::Helper(_)) {
+                source_body_from_helper |= body.draft().blocks().any(|(_, block)| {
+                    block.instructions.iter().any(|instruction| {
+                        matches!(
+                            &instruction.operation,
+                            Operation::Call(call)
+                                if matches!(
+                                    call.target,
+                                    CallTarget::Direct(ArtifactId::Callable(LirCallableId::Source(_)))
+                                ) && matches!(
+                                    call.attribution,
+                                    CallAttribution::SourceBodyFromOmittedHelper { .. }
+                                )
+                        )
+                    })
+                });
+            }
+            Ok(())
+        })
+        .unwrap();
+        if admitted.plan().view().artifact_policy()
+            == crate::backend::plan::ArtifactPolicy::Complete
+        {
+            assert_eq!(
+                program.receipts().count(),
+                admitted.plan().view().callables().count()
+            );
+        } else {
+            assert!(program.receipts().count() < admitted.plan().view().callables().count());
+        }
         assert!(program.receipts().any(|(_, receipt)| matches!(
             receipt.owner().key(),
             LirCallableId::Helper(key) if key.family == HelperFamily::RawClassCopy
         )));
+        assert!(source_body_from_helper);
     }
 }
 
@@ -196,10 +218,7 @@ fn optional_array_elements_close_recursive_clone_and_release_edges() {
         admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
             .expect("inline-array optional lifecycle is admitted");
     let program = lower_program(&admitted, |_| Ok(())).unwrap();
-    assert_eq!(
-        program.receipts().count(),
-        admitted.plan().view().callables().count()
-    );
+    assert!(program.receipts().count() < admitted.plan().view().callables().count());
 }
 
 #[test]
@@ -222,10 +241,7 @@ fn indexed_slices_and_aliases_cross_the_checked_lowering_boundary() {
         admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
             .expect("the complete indexed, slice, and alias protocols are admitted");
     let program = lower_program(&admitted, |_| Ok(())).unwrap();
-    assert_eq!(
-        program.receipts().count(),
-        admitted.plan().view().callables().count()
-    );
+    assert!(program.receipts().count() < admitted.plan().view().callables().count());
 }
 
 #[test]
@@ -246,10 +262,16 @@ fn recursive_optional_array_slices_close_every_generated_receipt() {
     ] {
         let admitted = admit(input).expect("recursive array slices are admitted");
         let program = lower_program(&admitted, |_| Ok(())).unwrap();
-        assert_eq!(
-            program.receipts().count(),
-            admitted.plan().view().callables().count()
-        );
+        if admitted.plan().view().artifact_policy()
+            == crate::backend::plan::ArtifactPolicy::Complete
+        {
+            assert_eq!(
+                program.receipts().count(),
+                admitted.plan().view().callables().count()
+            );
+        } else {
+            assert!(program.receipts().count() < admitted.plan().view().callables().count());
+        }
     }
 }
 
@@ -274,10 +296,7 @@ fn array_aliases_keep_descriptor_and_element_anchor_protocols_through_replacemen
         admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
             .expect("whole-array and exact-element aliases are admitted");
     let program = lower_program(&admitted, |_| Ok(())).unwrap();
-    assert_eq!(
-        program.receipts().count(),
-        admitted.plan().view().callables().count()
-    );
+    assert!(program.receipts().count() < admitted.plan().view().callables().count());
 }
 
 #[test]

@@ -3,7 +3,7 @@ use super::{SelectedReceipt, VerifiedSelectedCallable};
 use crate::backend::selected::SelectionContext;
 use crate::backend::{
     lir::{ProgramError, VerifiedProgram},
-    plan::{ArtifactId, BodyDisposition, LirCallableId},
+    plan::{ArtifactId, LirCallableId},
 };
 use std::collections::{BTreeMap, BTreeSet};
 #[cfg_attr(not(test), allow(dead_code))]
@@ -23,20 +23,17 @@ pub(in crate::backend) struct VerifiedSelectedProgram<'p> {
 #[cfg_attr(not(test), allow(dead_code))]
 impl<'p> SelectedProgramBuilder<'p> {
     pub(in crate::backend) fn new(context: &'p SelectionContext<'p>) -> Self {
-        let mut expected: BTreeSet<_> = context
+        let expected = context
             .catalog
-            .plan()
-            .callables()
-            .filter(|callable| callable.body == BodyDisposition::Required)
-            .map(|callable| callable.key)
+            .declarations()
+            .filter_map(|decl| {
+                if let ArtifactId::Callable(key) = decl.key {
+                    Some(key)
+                } else {
+                    None
+                }
+            })
             .collect();
-        expected.extend(context.catalog.declarations().filter_map(|decl| {
-            if let ArtifactId::Callable(key) = decl.key {
-                Some(key)
-            } else {
-                None
-            }
-        }));
         Self {
             context,
             parent: None,
@@ -53,9 +50,10 @@ impl<'p> SelectedProgramBuilder<'p> {
         if !receipt.matches(product) {
             return Err(ProgramError::StaleReceipt);
         }
-        if !self.expected.contains(&receipt.key()) {
-            return Err(crate::backend::plan::PlanError::UnknownDeclaration.into());
-        }
+        self.context.catalog.artifact(
+            ArtifactId::Callable(receipt.key()),
+            crate::backend::plan::ArtifactCategory::Callable,
+        )?;
         if self.completed.contains_key(&receipt.key()) {
             return Err(ProgramError::DuplicateDefinition);
         }
@@ -70,9 +68,21 @@ impl<'p> SelectedProgramBuilder<'p> {
         if let Some(original) = self.parent {
             original.require_same_snapshot(parent)?;
         }
-        for key in self.expected {
-            if !self.completed.contains_key(&key) {
-                return Err(ProgramError::MissingDefinition(ArtifactId::Callable(key)));
+        let mut expected = parent
+            .receipts()
+            .map(|(key, _)| *key)
+            .collect::<BTreeSet<_>>();
+        expected.extend(self.expected);
+        for key in &expected {
+            if !self.completed.contains_key(key) {
+                return Err(ProgramError::MissingDefinition(ArtifactId::Callable(*key)));
+            }
+        }
+        for key in self.completed.keys() {
+            if !expected.contains(key) {
+                return Err(ProgramError::UnexpectedDefinition(ArtifactId::Callable(
+                    *key,
+                )));
             }
         }
         // Local selection proves derivation from a genuine callable. Only closure

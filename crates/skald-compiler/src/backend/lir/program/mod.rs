@@ -1,4 +1,5 @@
 //! Finalized lowered inventory, without requiring resident predecessor bodies.
+mod closure;
 mod data;
 mod inventory;
 mod target;

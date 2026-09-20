@@ -1,8 +1,9 @@
 //! Canonical construction states and verifier-bound completion reconciliation.
-use super::{data, DataDefinition};
+use super::{closure, data, DataDefinition};
 use crate::backend::lir::{CompletionReceipt, VerifiedCallable};
 use crate::backend::plan::{
-    ArtifactId, BodyDisposition, CallableBinding, DataKey, LirCallableId, PlanError, PlanView,
+    ArtifactId, ArtifactPolicy, BodyDisposition, CallableBinding, DataKey, LirCallableId,
+    PlanError, PlanView,
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -23,6 +24,7 @@ pub(in crate::backend) enum ProgramError {
     StaleReceipt,
     DependencyMismatch,
     MissingDefinition(ArtifactId),
+    UnexpectedDefinition(ArtifactId),
     InvalidInitializer,
     InvalidAddend,
     SizeOverflow,
@@ -32,7 +34,7 @@ impl From<PlanError> for ProgramError {
         Self::Plan(value)
     }
 }
-enum WorkEntry<'p> {
+pub(super) enum WorkEntry<'p> {
     Declared,
     Building,
     Verified(CompletionReceipt<'p>),
@@ -52,12 +54,44 @@ pub(in crate::backend) struct VerifiedProgram<'p> {
     data: BTreeMap<DataKey, DataDefinition>,
 }
 impl<'p> ProgramBuilder<'p> {
+    fn reserve_referenced_callables(
+        &mut self,
+        references: &BTreeSet<ArtifactId>,
+    ) -> Result<(), ProgramError> {
+        if self.parent.artifact_policy() != ArtifactPolicy::Reachable {
+            return Ok(());
+        }
+        for dependency in references {
+            let ArtifactId::Callable(dependency) = dependency else {
+                continue;
+            };
+            self.parent.callable(*dependency)?;
+            self.states
+                .entry(*dependency)
+                .or_insert(WorkEntry::Declared);
+        }
+        Ok(())
+    }
+
     pub(in crate::backend) fn new(parent: PlanView<'p>) -> Self {
+        let reachable_roots = parent
+            .resources()
+            .reachable_roots
+            .iter()
+            .filter_map(|root| match root.artifact {
+                ArtifactId::Callable(key) => Some(key),
+                _ => None,
+            })
+            .collect::<BTreeSet<_>>();
         Self {
             parent,
             states: parent
                 .callables()
-                .filter(|c| c.body == BodyDisposition::Required)
+                .filter(|c| {
+                    c.body == BodyDisposition::Required
+                        && (parent.artifact_policy() == ArtifactPolicy::Complete
+                            || reachable_roots.contains(&c.key))
+                })
                 .map(|c| (c.key, WorkEntry::Declared))
                 .collect(),
             data: BTreeMap::new(),
@@ -130,6 +164,7 @@ impl<'p> ProgramBuilder<'p> {
             InventoryState::Verified => return Err(ProgramError::DuplicateDefinition),
             InventoryState::Building => {}
         }
+        self.reserve_referenced_callables(receipt.references())?;
         self.references.extend(receipt.references().iter().copied());
         self.states
             .insert(key, WorkEntry::Verified(receipt.clone()));
@@ -145,6 +180,7 @@ impl<'p> ProgramBuilder<'p> {
         let references = data::check(&definition, self.parent, |key, category| {
             data::parent_artifact(self.parent, key, category)
         })?;
+        self.reserve_referenced_callables(&references)?;
         self.references.extend(references);
         self.data.insert(definition.key, definition);
         Ok(())
@@ -159,7 +195,10 @@ impl<'p> ProgramBuilder<'p> {
                     }
                 }
                 ArtifactId::Data(key) => {
-                    let required = !matches!(key, DataKey::Static(field) if !self.parent.is_active_static(field));
+                    let resource_contract = !self.parent.resources().complete_roots.is_empty()
+                        || !self.parent.resources().reachable_roots.is_empty();
+                    let required = resource_contract
+                        || !matches!(key, DataKey::Static(field) if !self.parent.is_active_static(field));
                     if required && !self.data.contains_key(&key) {
                         return Err(ProgramError::MissingDefinition(declaration.key));
                     }
@@ -170,6 +209,7 @@ impl<'p> ProgramBuilder<'p> {
         for key in &self.references {
             data::parent_artifact(self.parent, *key, key.category())?;
         }
+        closure::check(self.parent, &self.states, &self.data)?;
         Ok(VerifiedProgram {
             parent: self.parent,
             snapshot: Arc::new(()),
