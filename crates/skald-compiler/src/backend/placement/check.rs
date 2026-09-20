@@ -354,9 +354,10 @@ impl<P: Payload> Requirements<'_, P> {
             // this production-solver baseline.
             metrics.peak_pending_blocks = reachable.len();
         }
-        let bound = iteration_bound(reachable.len(), self.locations.len(), self.tokens.len())
+        let bound = iteration_bound(reachable.len(), self.locations.len(), self.tokens().len())
             .ok_or_else(|| self.failure(CheckLocation::Entry, CheckReason::Capacity))?;
-        let top = State::top(self.locations.len(), &self.tokens);
+        let top = State::top(self.locations.len(), &self.token_layout)
+            .ok_or_else(|| self.failure(CheckLocation::Entry, CheckReason::Capacity))?;
         let mut states: BTreeMap<_, _> = reachable
             .iter()
             .map(|&block| (block, top.clone()))
@@ -434,7 +435,7 @@ impl<P: Payload> Requirements<'_, P> {
     pub(super) fn digest(&self, states: &BTreeMap<SelectedBlockId, State>) -> FixedPointDigest {
         FixedPointDigest {
             locations: self.locations.clone(),
-            tokens: self.tokens.clone(),
+            tokens: self.tokens().to_vec(),
             blocks: states
                 .iter()
                 .map(|(&block, state)| (block, state.canonical()))

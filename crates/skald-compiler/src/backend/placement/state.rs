@@ -1,69 +1,223 @@
 //! Must-contents lattice and bit-transfer semantics. No producer maps enter here.
 use super::{model::*, requirements::*};
 use crate::backend::selected::{AbiArea, BankKind, Payload, Representation, RepresentationKind};
-use std::collections::BTreeSet;
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
+
+const WORD_BITS: usize = u64::BITS as usize;
+
+/// The deterministic mapping from semantic identities to checker-private bits.
+#[derive(Debug, Eq, PartialEq)]
+pub(super) struct TokenLayout {
+    tokens: Vec<TransferValue>,
+    bits: BTreeMap<TransferValue, usize>,
+}
+
+impl TokenLayout {
+    pub fn new(mut tokens: Vec<TransferValue>) -> Arc<Self> {
+        tokens.sort_unstable();
+        tokens.dedup();
+        let bits = tokens
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(bit, token)| (token, bit))
+            .collect();
+        Arc::new(Self { tokens, bits })
+    }
+
+    pub fn tokens(&self) -> &[TransferValue] {
+        &self.tokens
+    }
+
+    fn bit(&self, token: TransferValue) -> usize {
+        self.bits[&token]
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct State {
-    contents: Vec<BTreeSet<TransferValue>>,
+struct BitMatrix {
+    locations: usize,
+    words_per_location: usize,
+    words: Vec<u64>,
 }
+
+impl BitMatrix {
+    fn empty(locations: usize, bits: usize) -> Option<Self> {
+        Self::filled(locations, bits, 0)
+    }
+
+    fn top(locations: usize, bits: usize) -> Option<Self> {
+        let mut matrix = Self::filled(locations, bits, u64::MAX)?;
+        let remainder = bits % WORD_BITS;
+        if remainder != 0 {
+            let final_mask = (1_u64 << remainder) - 1;
+            for location in 0..locations {
+                let final_word = matrix.range(location).end - 1;
+                matrix.words[final_word] &= final_mask;
+            }
+        }
+        Some(matrix)
+    }
+
+    fn filled(locations: usize, bits: usize, value: u64) -> Option<Self> {
+        let words_per_location =
+            (bits / WORD_BITS).checked_add(usize::from(bits % WORD_BITS != 0))?;
+        let word_count = locations.checked_mul(words_per_location)?;
+        word_count.checked_mul(std::mem::size_of::<u64>())?;
+
+        let mut words = Vec::new();
+        words.try_reserve_exact(word_count).ok()?;
+        words.resize(word_count, value);
+        Some(Self {
+            locations,
+            words_per_location,
+            words,
+        })
+    }
+
+    fn range(&self, location: usize) -> std::ops::Range<usize> {
+        assert!(location < self.locations, "checked location index");
+        let start = location * self.words_per_location;
+        start..start + self.words_per_location
+    }
+
+    fn contains(&self, location: usize, bit: usize) -> bool {
+        let range = self.range(location);
+        self.words[range.start + bit / WORD_BITS] & (1_u64 << (bit % WORD_BITS)) != 0
+    }
+
+    fn clear(&mut self, location: usize) {
+        let range = self.range(location);
+        self.words[range].fill(0);
+    }
+
+    fn insert(&mut self, location: usize, bit: usize) {
+        let range = self.range(location);
+        self.words[range.start + bit / WORD_BITS] |= 1_u64 << (bit % WORD_BITS);
+    }
+
+    fn remove(&mut self, location: usize, bit: usize) {
+        let range = self.range(location);
+        self.words[range.start + bit / WORD_BITS] &= !(1_u64 << (bit % WORD_BITS));
+    }
+
+    fn intersect(&mut self, other: &Self) -> usize {
+        debug_assert_eq!(self.locations, other.locations);
+        debug_assert_eq!(self.words_per_location, other.words_per_location);
+        self.words
+            .iter_mut()
+            .zip(&other.words)
+            .map(|(left, &right)| {
+                let removed = (*left & !right).count_ones() as usize;
+                *left &= right;
+                removed
+            })
+            .sum()
+    }
+
+    fn set_bits(&self, location: usize) -> impl Iterator<Item = usize> + '_ {
+        let range = self.range(location);
+        self.words[range]
+            .iter()
+            .copied()
+            .enumerate()
+            .flat_map(|(word_index, mut word)| {
+                std::iter::from_fn(move || {
+                    if word == 0 {
+                        return None;
+                    }
+                    let offset = word.trailing_zeros() as usize;
+                    word &= word - 1;
+                    Some(word_index * WORD_BITS + offset)
+                })
+            })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(super) struct State {
+    layout: Arc<TokenLayout>,
+    contents: BitMatrix,
+}
+
+impl PartialEq for State {
+    fn eq(&self, other: &Self) -> bool {
+        (Arc::ptr_eq(&self.layout, &other.layout) || self.layout == other.layout)
+            && self.contents == other.contents
+    }
+}
+
+impl Eq for State {}
+
 impl State {
-    pub fn empty(locations: usize) -> Self {
-        Self {
-            contents: vec![BTreeSet::new(); locations],
-        }
+    pub fn empty(locations: usize, layout: &Arc<TokenLayout>) -> Option<Self> {
+        Some(Self {
+            layout: Arc::clone(layout),
+            contents: BitMatrix::empty(locations, layout.tokens.len())?,
+        })
     }
-    pub fn top(locations: usize, tokens: &[TransferValue]) -> Self {
-        Self {
-            contents: vec![tokens.iter().copied().collect(); locations],
-        }
+
+    pub fn top(locations: usize, layout: &Arc<TokenLayout>) -> Option<Self> {
+        Some(Self {
+            layout: Arc::clone(layout),
+            contents: BitMatrix::top(locations, layout.tokens.len())?,
+        })
     }
+
     pub fn contains(&self, location: usize, token: TransferValue) -> bool {
-        self.contents[location].contains(&token)
+        self.contents.contains(location, self.layout.bit(token))
     }
+
     pub fn capture(
         &self,
         location: usize,
         mut include: impl FnMut(TransferValue) -> bool,
     ) -> BTreeSet<TransferValue> {
-        self.contents[location]
-            .iter()
-            .copied()
+        self.contents
+            .set_bits(location)
+            .map(|bit| self.layout.tokens[bit])
             .filter(|&token| include(token))
             .collect()
     }
+
     pub fn clear(&mut self, location: usize) {
-        self.contents[location].clear();
+        self.contents.clear(location);
     }
+
     pub fn replace(&mut self, location: usize, tokens: BTreeSet<TransferValue>) {
-        self.contents[location] = tokens;
-    }
-    pub fn insert(&mut self, location: usize, token: TransferValue) {
-        self.contents[location].insert(token);
-    }
-    pub fn intersect(&mut self, other: &Self) -> usize {
-        let mut removed = 0;
-        for (left, right) in self.contents.iter_mut().zip(&other.contents) {
-            let before = left.len();
-            left.retain(|token| right.contains(token));
-            removed += before - left.len();
+        self.clear(location);
+        for token in tokens {
+            self.insert(location, token);
         }
-        removed
     }
+
+    pub fn insert(&mut self, location: usize, token: TransferValue) {
+        self.contents.insert(location, self.layout.bit(token));
+    }
+
+    pub fn intersect(&mut self, other: &Self) -> usize {
+        debug_assert!(Arc::ptr_eq(&self.layout, &other.layout) || self.layout == other.layout);
+        self.contents.intersect(&other.contents)
+    }
+
     pub fn forget(&mut self, token: TransferValue) {
-        for contents in &mut self.contents {
-            contents.remove(&token);
+        let bit = self.layout.bit(token);
+        for location in 0..self.contents.locations {
+            self.contents.remove(location, bit);
         }
     }
 
     #[cfg(test)]
     pub fn canonical(&self) -> Vec<Vec<TransferValue>> {
-        self.contents
-            .iter()
-            .map(|contents| contents.iter().copied().collect())
+        (0..self.contents.locations)
+            .map(|location| self.capture(location, |_| true).into_iter().collect())
             .collect()
     }
 }
+
 impl<P: Payload> Requirements<'_, P> {
     pub fn index(&self, location: Location) -> usize {
         self.locations
@@ -245,5 +399,56 @@ impl<P: Payload> Requirements<'_, P> {
                 state.clear(index);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BitMatrix, WORD_BITS};
+
+    #[test]
+    fn zero_bit_matrices_retain_location_shape() {
+        let empty = BitMatrix::empty(3, 0).unwrap();
+        let top = BitMatrix::top(3, 0).unwrap();
+        assert_eq!(empty, top);
+        assert_eq!(empty.locations, 3);
+        assert_eq!(empty.set_bits(2).collect::<Vec<_>>(), vec![]);
+    }
+
+    #[test]
+    fn top_masks_the_partially_used_final_word() {
+        let matrix = BitMatrix::top(2, WORD_BITS + 3).unwrap();
+        assert_eq!(matrix.set_bits(0).count(), WORD_BITS + 3);
+        assert_eq!(matrix.set_bits(1).count(), WORD_BITS + 3);
+        assert_eq!(matrix.words[1], 0b111);
+        assert_eq!(matrix.words[3], 0b111);
+    }
+
+    #[test]
+    fn operations_cross_word_and_location_boundaries() {
+        let mut left = BitMatrix::empty(2, WORD_BITS + 2).unwrap();
+        for bit in [0, WORD_BITS - 1, WORD_BITS, WORD_BITS + 1] {
+            left.insert(0, bit);
+        }
+        left.insert(1, WORD_BITS);
+        assert!(left.contains(0, WORD_BITS));
+        assert!(left.contains(1, WORD_BITS));
+
+        left.remove(0, WORD_BITS - 1);
+        let mut right = BitMatrix::empty(2, WORD_BITS + 2).unwrap();
+        right.insert(0, 0);
+        right.insert(0, WORD_BITS + 1);
+        assert_eq!(left.intersect(&right), 2);
+        assert_eq!(left.set_bits(0).collect::<Vec<_>>(), vec![0, WORD_BITS + 1]);
+        assert!(left.set_bits(1).next().is_none());
+
+        left.clear(0);
+        assert!(left.set_bits(0).next().is_none());
+    }
+
+    #[test]
+    fn dimensions_and_reservations_are_checked() {
+        assert!(BitMatrix::empty(usize::MAX, WORD_BITS + 1).is_none());
+        assert!(BitMatrix::empty(usize::MAX / 4, WORD_BITS * 8).is_none());
     }
 }

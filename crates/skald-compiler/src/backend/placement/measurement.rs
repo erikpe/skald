@@ -33,7 +33,7 @@ impl PlacementCheckMetrics {
                 Location::Abi { .. } => self.abi_locations += 1,
             }
         }
-        self.tokens = requirements.tokens.len();
+        self.tokens = requirements.tokens().len();
         self.state_bits = requirements
             .locations
             .len()

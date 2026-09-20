@@ -88,3 +88,43 @@ discarded while processing intersections across all rounds; it is a work count,
 not the number of distinct final lattice facts. Re-run the same witness set and
 host/profile protocol for roadmap checkpoints, and use structural observations
 to distinguish algorithmic change from machine noise.
+
+## PS03 compact-state checkpoint
+
+The compact-state checkpoint was captured on 2026-09-20 from revision
+`8957e382` plus the uncommitted PS03 implementation. It used the same host,
+unoptimized Cargo test profile, zero warm-ups, two alternating repetitions and
+complete witness matrix as PS01. The retained local report is
+`build/measurements/placement-checking/run-_7pn92f0/report.json`.
+
+| Witness | Wall median | Wall improvement | Check median | Check improvement | Peak RSS | RSS reduction |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `recursive-optionals` | 2.432 s | 19.2x | 1.395 s | 32.6x | 48.4 MiB | 59.0% |
+| `primitive-array-allocation` | 0.872 s | 45.8x | 0.576 s | 68.8x | 47.6 MiB | 78.9% |
+| `array-element-lifecycle` | 1.613 s | 120.8x | 1.409 s | 138.1x | 51.2 MiB | 94.3% |
+| `indexed-arrays-and-aliases` | 1.069 s | 82.4x | 0.867 s | 101.3x | 50.4 MiB | 92.1% |
+| `copied-array-slices` | 1.020 s | 88.9x | 0.839 s | 107.8x | 49.6 MiB | 91.0% |
+| `primitive-slice-assignment` | 1.266 s | 93.0x | 1.078 s | 109.0x | 51.0 MiB | 93.3% |
+| `empty-inline-array-control` | 0.187 s | 4.3x | 0.038 s | 17.0x | 46.4 MiB | 24.4% |
+| `small-scalar-control` | 0.132 s | 6.5x | 0.039 s | 19.1x | 46.9 MiB | 29.0% |
+
+Placement production stayed within baseline noise at 5.20--28.58 ms. Every
+deterministic dimension and work counter exactly matches PS01, including 244
+rounds and 80,995,620 processed removals for recursive optionals and 68 rounds
+and 341,291,293 removals for array-element lifecycle. The speedup therefore
+comes from compact storage and word operations rather than changed convergence
+semantics or a smaller workload.
+
+The compact representation by itself clears the accepted per-witness goals:
+every discovery witness improves by more than 5x, the worst wall median is well
+below 30 seconds, and the worst baseline RSS falls by more than 50%. Controls
+also improve rather than regress. A cached `make compiler-test` completed in
+50.30 seconds after this change; the roadmap's final cached workspace and
+`make check` acceptance measurements remain owned by PS06.
+
+No immutable relation has a demonstrated material cost at this checkpoint.
+Although round visits remain structurally unchanged, absolute witness time is
+already below 2.5 seconds and all current performance thresholds are met.
+Consequently PS04 should add no relation cache without new profile evidence,
+and PS05's worklist is presently a justified skip under the roadmap's schedule
+stop condition.

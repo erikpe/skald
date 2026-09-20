@@ -1,6 +1,7 @@
 # Placement Checking Scalability Roadmap
 
-Status: active; PS01 and PS02 are complete, and PS03 is next.
+Status: active; PS01 through PS03 are complete, and the PS04 skip assessment
+is next.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
 Implementation baseline: `9eafca80`, the committed roadmap revision immediately
 before PS01 changed code or measurement support.
@@ -66,7 +67,7 @@ accepting a timing-dependent result.
 
 - [x] PS01 — Establish placement phase measurements and pass the diagnosis checkpoint
 - [x] PS02 — Establish fixed-point equivalence evidence and migration scaffolding
-- [ ] PS03 — Replace tree-set lattice states with compact finite bitsets
+- [x] PS03 — Replace tree-set lattice states with compact finite bitsets
 - [ ] PS04 — Precompute measured immutable placement relations
 - [ ] PS05 — Replace full convergence rounds with a deterministic worklist
 - [ ] PS06 — Pass the optional/array performance acceptance checkpoint
@@ -162,18 +163,18 @@ disposition. The ordinary checker exposes no comparison API.
 **Purpose:** remove the dominant dense-top allocation and cloning cost while
 retaining the existing round schedule for a clean representation comparison.
 
-- [ ] Assign deterministic checker-private token bits and store each location's
+- [x] Assign deterministic checker-private token bits and store each location's
   definite contents as canonically masked machine words.
-- [ ] Implement top, empty, membership, iteration, insertion, removal,
+- [x] Implement top, empty, membership, iteration, insertion, removal,
   intersection-with-removal-count, equality and compatible-token capture without
   exposing bit identities outside placement checking.
-- [ ] Preserve definition epochs, writes, clobbers, transfers, parameter
+- [x] Preserve definition epochs, writes, clobbers, transfers, parameter
   rebinding and strict replay through the private state interface.
-- [ ] Keep checked arithmetic for state dimensions and allocation sizes;
+- [x] Keep checked arithmetic for state dimensions and allocation sizes;
   unrepresentable capacity rejects with the existing structured reason.
-- [ ] Compare every focused and generated case with the independent round
+- [x] Compare every focused and generated case with the independent round
   oracle, including zero tokens and a partially used final word.
-- [ ] Re-run the complete witness measurement and record elapsed, phase, RSS and
+- [x] Re-run the complete witness measurement and record elapsed, phase, RSS and
   structural changes against PS01.
 
 **Tests:** compact-set unit tests at zero, word and cross-word boundaries;
@@ -183,6 +184,27 @@ placement equivalence/counterexample suites; all six native witnesses;
 **Exit criteria:** production uses compact state with unchanged round semantics,
 all oracle comparisons and diagnostics match, and the compact-state checkpoint
 records which remaining costs justify PS04 and PS05.
+
+**Completed:** production states now share one deterministically sorted token
+layout and store location contents in a flat, canonically masked `u64` matrix.
+Every semantic operation still accepts `TransferValue`; numeric bit identities
+remain inside `state.rs`. Checked dimension arithmetic and fallible reservation
+map unrepresentable state storage to `CheckReason::Capacity`. Boundary tests
+cover zero tokens, partial and crossed words, multiple locations and removal
+counts, while the complete focused/generated corpus still agrees with the
+independent round oracle.
+
+The two-repeat PS03 checkpoint is recorded in
+[Placement Checking Performance](../development/PLACEMENT_CHECKING_PERFORMANCE.md).
+Witness wall time improved by 19.2x--120.8x and placement-checking time by
+32.6x--138.1x; the worst measured witness is now 2.43 seconds and the former
+891.8 MiB peak is 51.2 MiB. All structural counters, including rounds, visits
+and fact removals, are unchanged. The representation alone already exceeds the
+final witness and memory thresholds. No immutable relation is shown material,
+so PS04 should record its candidates as skipped unless new profile evidence
+identifies one. The unchanged round work is measurable but no longer justifies
+PS05's scheduling complexity under the accepted stop condition; its formal
+skip remains a later checkpoint decision.
 
 ### PS04 — Precompute measured immutable placement relations
 
@@ -314,9 +336,10 @@ closed, and LA05 receives one maintained scalable baseline checker.
 | --- | --- | --- | --- |
 | `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, `974ecb20` | Review and narrow/remove in PS07 | Retain only if the test-only interface remains deterministic, has no ordinary-compilation output and is used by LA05 measurement |
 | `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, `974ecb20` | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
-| `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, commit pending | Remove or keep test-only in PS07 | Retain only if they materially protect solver equivalence without exposing authority or adding material suite cost |
-| `observe_round_solver` and independent stable replay | PS02, commit pending | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
-| `tests/equivalence.rs` generated solver-equivalence cases | PS02, commit pending | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
+| `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, `8957e382` | Remove or keep test-only in PS07 | Retain only if they materially protect solver equivalence without exposing authority or adding material suite cost |
+| `observe_round_solver` and independent stable replay | PS02, `8957e382` | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
+| `tests/equivalence.rs` generated solver-equivalence cases | PS02, `8957e382` | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
+| `TokenLayout`, `BitMatrix` and compact `State` | PS03, commit pending | Retain | Production representation; deterministic layout, canonical final-word masking, checked dimensions and semantic-only callers |
 | Direct relation paths superseded by immutable indices | PS04 | Remove with each accepted index | Keep only a test oracle where it provides independent equivalence evidence |
 | Full-round production solver superseded by worklist | PS05 | Remove in PS05 after equivalence | A test-only round oracle may remain under the separate oracle criterion; no production alternative |
 

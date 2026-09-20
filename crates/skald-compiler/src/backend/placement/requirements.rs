@@ -1,5 +1,9 @@
 //! Reconstruct selected requirements and immutable target footprints once per check.
-use super::{model::*, state::State, target::*};
+use super::{
+    model::*,
+    state::{State, TokenLayout},
+    target::*,
+};
 use crate::{
     backend::{
         graph::{SelectedBlockId, SelectedValueId},
@@ -8,6 +12,7 @@ use crate::{
     source::Span,
 };
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::backend) enum CheckReason {
@@ -86,7 +91,7 @@ pub(super) struct Requirements<'s, P> {
     pub blocks: BTreeMap<SelectedBlockId, Block<'s, P>>,
     pub origins: BTreeMap<Site, Option<Span>>,
     pub locations: Vec<Location>,
-    pub tokens: Vec<TransferValue>,
+    pub token_layout: Arc<TokenLayout>,
     pub footprints: BTreeMap<Location, SlotFootprint>,
     pub preserved: Vec<ViewId>,
     pub move_kills: BTreeMap<TransferPoint, Vec<Vec<UnitId>>>,
@@ -226,7 +231,9 @@ impl<'s, P: Payload> Requirements<'s, P> {
             .map(TransferValue::Selected)
             .collect();
         tokens.extend(preserved.iter().copied().map(TransferValue::Preserved));
-        let seed = State::empty(locations.len());
+        let token_layout = TokenLayout::new(tokens);
+        let seed = State::empty(locations.len(), &token_layout)
+            .ok_or_else(|| CheckFailure::new(CheckLocation::Entry, CheckReason::Capacity))?;
         Ok(Self {
             entry: entry.expect("verified entry"),
             inputs,
@@ -235,7 +242,7 @@ impl<'s, P: Payload> Requirements<'s, P> {
             blocks,
             origins,
             locations,
-            tokens,
+            token_layout,
             footprints,
             preserved,
             move_kills: BTreeMap::new(),
@@ -248,5 +255,9 @@ impl<'s, P: Payload> Requirements<'s, P> {
             .site()
             .and_then(|site| self.origins.get(&site).copied().flatten());
         failure
+    }
+
+    pub(super) fn tokens(&self) -> &[TransferValue] {
+        self.token_layout.tokens()
     }
 }

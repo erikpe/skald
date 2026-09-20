@@ -342,14 +342,15 @@ pub(super) fn observe_round_solver<P: Payload>(
     let Some(bound) = oracle_iteration_bound(
         reachable.len(),
         requirements.locations.len(),
-        requirements.tokens.len(),
+        requirements.tokens().len(),
     ) else {
         return SolverObservation {
             fixed_point: None,
             outcome: Err(requirements.failure(CheckLocation::Entry, CheckReason::Capacity)),
         };
     };
-    let top = ProductionState::top(requirements.locations.len(), &requirements.tokens);
+    let top = ProductionState::top(requirements.locations.len(), &requirements.token_layout)
+        .expect("production state dimensions were checked during collection");
     let mut states: BTreeMap<SelectedBlockId, ProductionState> = reachable
         .iter()
         .map(|&block| (block, top.clone()))
