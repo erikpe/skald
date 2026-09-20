@@ -128,3 +128,17 @@ already below 2.5 seconds and all current performance thresholds are met.
 Consequently PS04 should add no relation cache without new profile evidence,
 and PS05's worklist is presently a justified skip under the roadmap's schedule
 stop condition.
+
+## PS04 and PS05 stop-condition disposition
+
+PS04 retained the direct target and draft relation paths. The PS03 report did
+not identify any relation whose remaining absolute cost justified a cache, so
+no index, alternate interpretation or cache lifetime was introduced.
+
+PS05 retained deterministic Jacobi rounds. Structural round work remains
+observable, but placement checking takes only 0.58--1.41 seconds across the D01
+and D02 witnesses and all accepted witness and memory thresholds already pass.
+A worklist would therefore change convergence control flow without a current
+performance requirement. The living placement contract and test-only round
+oracle remain unchanged for PS07 review. PS06 is the next checkpoint and owns
+the repeated full acceptance measurements and repository gates.

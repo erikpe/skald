@@ -1,7 +1,7 @@
 # Placement Checking Scalability Roadmap
 
-Status: active; PS01 through PS03 are complete, and the PS04 skip assessment
-is next.
+Status: active; PS01 through PS05 are complete, PS04 and PS05 were skipped at
+their measured stop conditions, and PS06 is next.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
 Implementation baseline: `9eafca80`, the committed roadmap revision immediately
 before PS01 changed code or measurement support.
@@ -68,8 +68,8 @@ accepting a timing-dependent result.
 - [x] PS01 — Establish placement phase measurements and pass the diagnosis checkpoint
 - [x] PS02 — Establish fixed-point equivalence evidence and migration scaffolding
 - [x] PS03 — Replace tree-set lattice states with compact finite bitsets
-- [ ] PS04 — Precompute measured immutable placement relations
-- [ ] PS05 — Replace full convergence rounds with a deterministic worklist
+- [x] PS04 — Skip immutable relation indices at the compact-state checkpoint
+- [x] PS05 — Skip the worklist at the schedule checkpoint
 - [ ] PS06 — Pass the optional/array performance acceptance checkpoint
 - [ ] PS07 — Cumulative review, artifact cleanup and closure
 
@@ -208,65 +208,75 @@ skip remains a later checkpoint decision.
 
 ### PS04 — Precompute measured immutable placement relations
 
-**Purpose:** remove repeated target/draft relation scans that remain material
-after compact state, without creating speculative caches.
+**Purpose:** remove repeated target/draft relation scans only when they remain
+material after compact state, without creating speculative caches.
 
-- [ ] From PS03 evidence, select only material relations among location lookup,
-  overlap closures, resource-unit kills, call-invalidated ABI slots,
-  transfer-point lifetime expiry and representation-compatible token masks.
-- [ ] Build selected indices once per check from the same exact draft, selected
-  snapshot and immutable target facts used by current validation.
-- [ ] Keep indices inside the check invocation; reject stale/cross-target reuse
-  by construction rather than adding cache invalidation machinery.
-- [ ] Prove indexed and direct interpretations agree for native and synthetic
-  targets, overlapping widths, ABI signature aliases and partial preservation.
-- [ ] Measure each retained index independently where practical. Remove an
-  index whose complexity has no demonstrated benefit.
-- [ ] Re-run structural and timing reports and make the schedule checkpoint
-  decision explicit.
+- [x] Reviewed location lookup, overlap closures, resource-unit kills,
+  call-invalidated ABI slots, transfer-point lifetime expiry and
+  representation-compatible token masks against the PS03 checkpoint; none has
+  a demonstrated material cost.
+- [x] Skipped index construction, so no new snapshot lifetime, target binding or
+  cache invalidation responsibility was introduced.
+- [x] Retained the existing direct interpretations for native and synthetic
+  targets, overlapping widths, ABI aliases and partial preservation.
+- [x] Retained no index requiring independent measurement or a parallel direct
+  implementation as a test oracle.
+- [x] Used the complete two-repeat PS03 report for the schedule checkpoint: all
+  witnesses already exceed the final speed and memory thresholds with unchanged
+  structural work counters.
 
-**Tests:** index-construction and equivalence tests; complete placement owner
-suite; native/synthetic target cases; six native witnesses; `make compiler-test`.
+**Validation for the skip:** the PS03 compact-state and oracle suites, all six
+native witnesses, `make compiler-test` and `make static-check` already cover the
+unchanged direct relations. This documentation-only disposition adds no new
+runtime behavior requiring duplicate tests.
 
 **Exit criteria:** every retained index has a measured hot-path consumer and
 identical semantics, unhelpful candidates are absent, and the roadmap records
 whether PS05 proceeds or is skipped under the accepted stop condition.
 
+**Disposition:** skipped. No index was retained because the compact state alone
+reduced the worst witness to 2.43 seconds, all discovery witnesses improved by
+at least 19.2x, and the largest measured RSS fell by 94.3%. The schedule
+checkpoint therefore directs PS05 to use its skip path.
+
 ### PS05 — Replace full convergence rounds with a deterministic worklist
 
 **Purpose:** avoid interpreting unchanged blocks and rebuilding global states
-while computing the same greatest fixed point.
+only when the remaining cost justifies changing convergence scheduling.
 
-- [ ] Implement stable reachability and deterministic FIFO successor scheduling,
-  preserving selected block and edge-occurrence order.
-- [ ] Schedule each reachable block on first propagation even when the lattice
-  has no tokens or the first edge state is top; later scheduling requires a
-  successful input-state change.
-- [ ] Preserve the fixed entry seed as an additional predecessor across
-  backedges and intersect every reachable predecessor edge occurrence.
-- [ ] Track fact removals and queue processing with checked arithmetic. Enforce
-  the finite lattice bound plus first-reach scheduling without wall-clock or
-  arbitrary iteration limits.
-- [ ] Keep speculative visits non-strict. After convergence, run strict replay
-  in the existing stable selected order so diagnostics remain schedule-independent.
-- [ ] Compare fixed-point digests and strict results against the round oracle on
-  every focused/generated case and both target profiles.
-- [ ] Update the living placement contract only after equivalence passes,
-  describing semantic convergence and deterministic scheduling rather than a
-  particular queue container.
+- [x] Skipped FIFO successor scheduling; production retains stable reachability
+  and deterministic Jacobi rounds in selected block and edge-occurrence order.
+- [x] Skipped first-propagation and queue-deduplication machinery, including the
+  special empty-token/top scheduling path it would require.
+- [x] Retained the existing fixed entry seed, backedge and predecessor-occurrence
+  semantics without a second production solver.
+- [x] Retained the checked finite round bound; no queue counters, allowances or
+  invariant paths were introduced.
+- [x] Retained non-strict convergence followed by strict stable replay, so
+  diagnostic selection is unchanged.
+- [x] Retained the bounded test-only round oracle for PS07 reconciliation; no
+  worklist comparison API or dormant implementation was added.
+- [x] Left the living placement contract unchanged because production still uses
+  its documented deterministic-round schedule.
 
 If PS04 records a justified skip, mark every checklist item with that disposition
 and leave the living round contract unchanged; do not land dormant worklist code.
 
-**Tests:** worklist first-reach/deduplication/termination unit tests; oracle
-equivalence over loops and counterexamples; stable-failure repeated runs;
-placement, native pilot and portability suites; `make compiler-test`,
-`make static-check`, and `make msrv-check`.
+**Validation for the skip:** the PS03 report preserves exactly the same rounds,
+block visits, edge visits and removal counts while meeting every current witness
+and RSS threshold. No worklist behavior exists to test; PS06 owns the final
+workspace, `make check` and repeated acceptance gates.
 
 **Exit criteria:** when implemented, the worklist matches the round oracle and
 all existing diagnostics while structural counters show reduced redundant
 visits. When skipped, PS04 evidence already meets final thresholds and documents
 why schedule complexity has no present consumer.
+
+**Disposition:** skipped. Repeated round work remains visible structurally, but
+placement checking now takes 0.58--1.41 seconds across the discovery witnesses.
+That absolute cost is not material under the accepted threshold, so a second
+convergence schedule would add correctness and maintenance risk without a
+current consumer.
 
 ### PS06 — Pass the optional/array performance acceptance checkpoint
 
@@ -339,9 +349,9 @@ closed, and LA05 receives one maintained scalable baseline checker.
 | `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, `8957e382` | Remove or keep test-only in PS07 | Retain only if they materially protect solver equivalence without exposing authority or adding material suite cost |
 | `observe_round_solver` and independent stable replay | PS02, `8957e382` | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
 | `tests/equivalence.rs` generated solver-equivalence cases | PS02, `8957e382` | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
-| `TokenLayout`, `BitMatrix` and compact `State` | PS03, commit pending | Retain | Production representation; deterministic layout, canonical final-word masking, checked dimensions and semantic-only callers |
-| Direct relation paths superseded by immutable indices | PS04 | Remove with each accepted index | Keep only a test oracle where it provides independent equivalence evidence |
-| Full-round production solver superseded by worklist | PS05 | Remove in PS05 after equivalence | A test-only round oracle may remain under the separate oracle criterion; no production alternative |
+| `TokenLayout`, `BitMatrix` and compact `State` | PS03, `24029bcc` | Retain | Production representation; deterministic layout, canonical final-word masking, checked dimensions and semantic-only callers |
+| Immutable relation indices | PS04 checkpoint, not introduced | Skipped | No relation had a material measured cost after compact state; direct target/draft queries remain authoritative |
+| Deterministic worklist | PS05 checkpoint, not introduced | Skipped | Accepted performance already met; deterministic-round production and its living contract remain unchanged |
 
 Update this ledger as commits introduce concrete symbols. Record the introducing
 task and commit, removal task and final disposition. New discoveries that do not
@@ -353,11 +363,11 @@ there is an actionable finding.
 
 PS01 is a hard diagnosis gate. PS02 establishes independent equivalence before
 production representation changes. PS03 changes representation while retaining
-the current schedule, isolating semantic and performance effects. PS04 admits
-only measured indices. PS05 changes convergence order only after compact-state
-equivalence and only when the schedule checkpoint justifies it. PS06 applies the
-same-host acceptance protocol to both discoveries. PS07 reviews all commits and
-temporary artifacts together before clearing the LA05 dependency.
+the current schedule, isolating semantic and performance effects. PS04 admitted
+no indices because none remained material. PS05 retained deterministic rounds
+because the schedule checkpoint did not justify changing convergence order.
+PS06 applies the same-host acceptance protocol to both discoveries. PS07 reviews
+all commits and temporary artifacts together before clearing the LA05 dependency.
 
 PS02 may prepare bounded oracle cases while PS01 measurements run, but no
 production solver change starts before the diagnosis is a go. Later tasks are
