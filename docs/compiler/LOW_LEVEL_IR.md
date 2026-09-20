@@ -184,9 +184,11 @@ release graph calls the metadata-selected finalizer with the payload address,
 then frees its unchanged entry handle after the visible call. Generated helper
 calls inherit their caller's source boundary and create no trace frame.
 The generated process entry owns no source frame: it calls the runtime ABI marker,
-then language main and returns main's exact scalar result. Admission excludes
-statics, so startup/shutdown coordinators remain absent rather than acquiring
-synthetic empty bodies.
+the planned initializer when present, language main, and the planned finalizer
+when present, then returns main's preserved scalar result. Both coordinators are
+ordinary verified worklist callables built solely from frozen activation and
+reverse-shutdown facts. Their process-boundary calls create no synthetic source
+frame; source initializer and destructor bodies retain their own frames.
 
 `lower_program` streams each verified body to a consumer and retains exact
 completion receipts. It materializes the plan's frozen data recipes directly,
@@ -227,8 +229,9 @@ alone participate in certified activation and reverse shutdown. Complete mode ma
 retain an inactive slot when a physically retained unreachable body has a typed
 reference; that slot has an exact all-zero physical recipe and no semantic
 initializer or cleanup. Reachable mode rejects this representation. Program
-publication reconciles active data definitions against the frozen recipes;
-retained-inactive zero storage remains a later target-materialization obligation.
+publication reconciles every retained static data definition against the frozen
+recipes. Complete mode materializes retained-inactive slots as checked
+zero-filled target data while keeping them out of both lifecycle coordinators.
 
 The complete-fact checkpoint reconciles this catalog with the exhaustive
 migration inventory. Aggregate hidden results and receiver metadata remain

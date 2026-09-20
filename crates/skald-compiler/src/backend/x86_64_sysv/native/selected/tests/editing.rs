@@ -90,3 +90,81 @@ fn changed_address_cannot_retain_another_objects_memory_effect() {
         },
     );
 }
+
+#[test]
+fn changed_static_address_cannot_retain_another_statics_memory_effect() {
+    let mut checked = false;
+    for_sources(
+        concat!(
+            "class State {static first:i64=2;static second:i64=3;init(){}}",
+            "fn main()->i64{return State.first+State.second;}"
+        ),
+        |context, lower| {
+            let body = select(context, lower).unwrap();
+            let mut addresses = vec![];
+            let mut loads = vec![];
+            body.visit(|fact| {
+                if let SelectedFact::Instruction {
+                    block,
+                    ordinal,
+                    payload,
+                } = fact
+                {
+                    match payload.opcode {
+                        Opcode::SymbolAddress {
+                            symbol: plan::ArtifactId::Data(plan::DataKey::Static(field)),
+                            out,
+                        } => addresses.push((block, ordinal, field, out.value)),
+                        Opcode::Load {
+                            region: crate::backend::effects::MemoryRegion::Static(field),
+                            ..
+                        } => loads.push((block, ordinal, field)),
+                        _ => {}
+                    }
+                }
+                Ok::<_, std::convert::Infallible>(())
+            })
+            .unwrap();
+            let Some((block, ordinal, _field, other)) =
+                loads.into_iter().find_map(|(block, ordinal, field)| {
+                    addresses
+                        .iter()
+                        .find(|(address_block, address_ordinal, address_field, _)| {
+                            *address_block == block
+                                && *address_ordinal < ordinal
+                                && *address_field != field
+                        })
+                        .map(|(_, _, _, value)| (block, ordinal, field, *value))
+                })
+            else {
+                return;
+            };
+            let verifier = Verifier::new(lower.receipt().owner().context().profile()).unwrap();
+            let mut editor = body.into_editor();
+            editor
+                .replace_operand(
+                    editor.block(block).unwrap(),
+                    ordinal,
+                    0,
+                    editor.value(other).unwrap(),
+                )
+                .unwrap();
+            match editor.finish(&verifier) {
+                Err(selected::SelectedEditFailure::Verify(failures)) => {
+                    assert!(
+                        failures.iter().any(|failure| matches!(
+                            failure.reason,
+                            selected::SelectedReason::Target(
+                                "native static memory access is out of bounds or misaligned"
+                            )
+                        )),
+                        "{failures:?}"
+                    )
+                }
+                _ => panic!("changed static address must fail independent native checking"),
+            }
+            checked = true;
+        },
+    );
+    assert!(checked, "fixture did not select the expected static access");
+}

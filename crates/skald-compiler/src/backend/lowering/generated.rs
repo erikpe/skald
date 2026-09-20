@@ -280,6 +280,41 @@ fn emit_optional_cleanup<'plan>(
     optional: crate::identity::OptionalTypeId,
     address: ValueHandle<'plan>,
 ) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
+    emit_optional_cleanup_with_attribution(
+        plan,
+        builder,
+        current,
+        optional,
+        address,
+        CallAttribution::InheritedOperation { boundary },
+    )
+}
+
+pub(super) fn emit_process_boundary_optional_cleanup<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    current: crate::backend::lir::BlockHandle<'plan>,
+    optional: crate::identity::OptionalTypeId,
+    address: ValueHandle<'plan>,
+) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
+    emit_optional_cleanup_with_attribution(
+        plan,
+        builder,
+        current,
+        optional,
+        address,
+        CallAttribution::ProcessBoundary,
+    )
+}
+
+fn emit_optional_cleanup_with_attribution<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    current: crate::backend::lir::BlockHandle<'plan>,
+    optional: crate::identity::OptionalTypeId,
+    address: ValueHandle<'plan>,
+    attribution: CallAttribution,
+) -> Result<crate::backend::lir::BlockHandle<'plan>, LowerError> {
     let fact = plan
         .semantic()
         .optional(optional)
@@ -321,13 +356,13 @@ fn emit_optional_cleanup<'plan>(
                     false_edge: edge(complete),
                 },
             )?;
-            call_owner_helper(
+            call_owner_helper_attributed(
                 plan,
                 builder,
                 cleanup,
-                boundary,
                 HelperFamily::Release,
                 handle,
+                attribution,
             )?;
             builder.terminate(cleanup, Terminator::Jump(edge(complete)))?;
             Ok(complete)
@@ -335,15 +370,21 @@ fn emit_optional_cleanup<'plan>(
         crate::backend::plan::OptionalStorageFact::InlineClass(class) => {
             let cleanup = optional_present_branch(plan, builder, current, fact, address)?;
             let payload = byte_offset(builder, cleanup.body, address, fact.payload_offset)?;
-            call_finalizer(plan, builder, cleanup.body, boundary, class, payload)?;
+            call_finalizer_attributed(plan, builder, cleanup.body, class, payload, attribution)?;
             builder.terminate(cleanup.body, Terminator::Jump(edge(cleanup.complete)))?;
             Ok(cleanup.complete)
         }
         crate::backend::plan::OptionalStorageFact::Nested(inner) => {
             let cleanup = optional_present_branch(plan, builder, current, fact, address)?;
             let payload = byte_offset(builder, cleanup.body, address, fact.payload_offset)?;
-            let body =
-                emit_optional_cleanup(plan, builder, cleanup.body, boundary, inner, payload)?;
+            let body = emit_optional_cleanup_with_attribution(
+                plan,
+                builder,
+                cleanup.body,
+                inner,
+                payload,
+                attribution,
+            )?;
             builder.terminate(body, Terminator::Jump(edge(cleanup.complete)))?;
             Ok(cleanup.complete)
         }
@@ -362,14 +403,14 @@ fn emit_optional_cleanup<'plan>(
                     },
                 },
             )?[0];
-            call_array_helper(
+            call_array_helper_attributed(
                 plan,
                 builder,
                 cleanup.body,
-                boundary,
                 array,
                 HelperFamily::ArrayRelease,
                 handle,
+                attribution,
             )?;
             builder.terminate(cleanup.body, Terminator::Jump(edge(cleanup.complete)))?;
             Ok(cleanup.complete)
@@ -457,6 +498,24 @@ fn call_owner_helper<'plan>(
     family: HelperFamily,
     handle: ValueHandle<'plan>,
 ) -> Result<(), LowerError> {
+    call_owner_helper_attributed(
+        plan,
+        builder,
+        block,
+        family,
+        handle,
+        CallAttribution::InheritedOperation { boundary },
+    )
+}
+
+fn call_owner_helper_attributed<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    family: HelperFamily,
+    handle: ValueHandle<'plan>,
+    attribution: CallAttribution,
+) -> Result<(), LowerError> {
     let target = super::ownership::owner_helper(plan, family)?;
     let signature = callable_signature(plan, target)?;
     builder.append(
@@ -468,7 +527,7 @@ fn call_owner_helper<'plan>(
                 role: ComponentRole::Parameter(0),
                 value: handle,
             }],
-            attribution: CallAttribution::InheritedOperation { boundary },
+            attribution,
         }),
     )?;
     Ok(())
@@ -482,6 +541,26 @@ fn call_array_helper<'plan>(
     array: crate::identity::ArrayTypeId,
     family: HelperFamily,
     handle: ValueHandle<'plan>,
+) -> Result<(), LowerError> {
+    call_array_helper_attributed(
+        plan,
+        builder,
+        block,
+        array,
+        family,
+        handle,
+        CallAttribution::InheritedOperation { boundary },
+    )
+}
+
+fn call_array_helper_attributed<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    array: crate::identity::ArrayTypeId,
+    family: HelperFamily,
+    handle: ValueHandle<'plan>,
+    attribution: CallAttribution,
 ) -> Result<(), LowerError> {
     let layout = plan
         .semantic()
@@ -508,7 +587,7 @@ fn call_array_helper<'plan>(
                 role: ComponentRole::Parameter(0),
                 value: handle,
             }],
-            attribution: CallAttribution::InheritedOperation { boundary },
+            attribution,
         }),
     )?;
     Ok(())
@@ -583,6 +662,24 @@ fn call_finalizer<'plan>(
     class: ClassId,
     address: ValueHandle<'plan>,
 ) -> Result<(), LowerError> {
+    call_finalizer_attributed(
+        plan,
+        builder,
+        block,
+        class,
+        address,
+        CallAttribution::InheritedOperation { boundary },
+    )
+}
+
+fn call_finalizer_attributed<'plan>(
+    plan: PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    class: ClassId,
+    address: ValueHandle<'plan>,
+    attribution: CallAttribution,
+) -> Result<(), LowerError> {
     let target = class_helper(plan, class, HelperFamily::ClassFinalizer)?;
     let signature = callable_signature(plan, target)?;
     builder.append(
@@ -594,7 +691,7 @@ fn call_finalizer<'plan>(
                 role: ComponentRole::Parameter(0),
                 value: address,
             }],
-            attribution: CallAttribution::InheritedOperation { boundary },
+            attribution,
         }),
     )?;
     Ok(())

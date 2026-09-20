@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM15 are complete and LM16 is next.
+Status: active; LM01–LM16 are complete and LM17 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -53,7 +53,7 @@ per-callable or per-operation fallback.
 - [x] LM13 — Lower array element lifecycle and generated helper families
 - [x] LM14 — Lower indexed construction, slices and array aliases
 - [x] LM15 — Lower strings, literal data and standard I/O
-- [ ] LM16 — Lower static lifecycle and complete entry orchestration
+- [x] LM16 — Lower static lifecycle and complete entry orchestration
 - [ ] LM17 — Complete trace, data and artifact closure parity
 - [ ] LM18 — Reconcile exhaustive private parity and measurements
 - [ ] LM19 — Cumulative review, cleanup and LA05 handoff
@@ -552,13 +552,13 @@ partial binary writes, closed descriptors, panic bytes and both trace policies.
 **Purpose:** integrate certified program startup/shutdown with the complete
 language surface and accepted static storage dispositions.
 
-- [ ] Lower active static access, zero/default versus explicit initialization,
+- [x] Lower active static access, zero/default versus explicit initialization,
   all cleanup shapes and exact reverse shutdown.
-- [ ] Generate program initializer/finalizer coordinators through the ordinary
+- [x] Generate program initializer/finalizer coordinators through the ordinary
   worklist without rediscovering activation.
-- [ ] Materialize retained-inactive zero storage only for complete-mode typed
+- [x] Materialize retained-inactive zero storage only for complete-mode typed
   references and prove it has no lifecycle participation.
-- [ ] Complete the exported entry sequence: ABI marker, initialization, language
+- [x] Complete the exported entry sequence: ABI marker, initialization, language
   entry, result preservation, normal finalization and return.
 
 **Tests:** dependency order/cycles, each cleanup shape, startup/entry/shutdown
@@ -567,6 +567,19 @@ frame exclusions.
 
 **Exit criteria:** entry and static lifecycle parity hold for both artifact
 policies with no legacy coordinator or fallback slot planner.
+
+Completed on 2026-09-20. Planning now admits static initializer bodies and
+freezes every coordinator dependency before lowering. The shared worklist emits
+ordinary verified initializer and finalizer callables from the certified
+activation and reverse-shutdown records, including class, recursive optional,
+shared-owner and array cleanup. Complete mode materializes retained-inactive
+statics as checked zero-filled data without activation or shutdown; reachable
+mode continues to reject references to that physical-only representation. The
+generated entry calls the ABI marker, initializer, language entry and finalizer
+in order while retaining the language result across shutdown. Native evidence
+covers both artifact and trace policies, each cleanup family, result
+preservation, startup/entry/shutdown failures and exclusion of generated
+coordinator frames from source traces.
 
 ### LM17 — Complete trace, data and artifact closure parity
 
@@ -672,7 +685,7 @@ continuing purpose and explicit removal owner.
 | Eager complete-mode `RawClassCopy` declarations for every class | LM03, `dbada8c6` | LM09 | Removed in LM09: raw-address wrappers are array-element machinery and will acquire roots from their actual array-helper consumers |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
-| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM11: both artifact policies admit the complete class/shared and non-array optional core; array, string, I/O and static families retain explicit later owners |
+| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM16: both artifact policies admit the complete class/shared, optional, array, string, I/O and static-lifecycle families; LM17–LM18 own the remaining trace/artifact closure and exhaustive removal |
 | Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 

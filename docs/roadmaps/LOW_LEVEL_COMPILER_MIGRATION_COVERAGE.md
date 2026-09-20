@@ -291,9 +291,9 @@ LA03's pilot and LA04's full surface.
 | Shared handle retain/release helpers | `lower/ownership/helpers.rs`; array element and static shutdown needs | Shared lowered graphs, inherited attribution and visible call clobbers; no source trace frame | E07, E16; G04 closed | Delivered by LM08 |
 | Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | Delivered by LM07–LM08, LM11 and LM13 |
 | Exact optional-box finalizers | `lower/optional_box.rs`, `lower/finalize/optional.rs`; `exact_optional` box types | Shared recursive optional payload cleanup; same ordinary lifecycle/call pipeline | E08; G04 for caller | Delivered by LM11 and LM13, including inline-array payload cleanup |
-| Program initializer/finalizer | `lower/static_lifecycle.rs`; verified activation/shutdown coordinator | Shared lowered callables; `ZeroDefault` versus `Explicit` activation, exact reverse shutdown; transitions require no target runtime state | E14; — | LA04 |
+| Program initializer/finalizer | `backend/lowering/static_lifecycle.rs`; verified activation/shutdown coordinator | Shared lowered callables; `ZeroDefault` versus `Explicit` activation, exact reverse shutdown; transitions require no target runtime state | E14 plus shared lowering/native lifecycle tests; — | Delivered by LM16 |
 | Static cleanup shapes | `lower/static_lifecycle.rs`; `None`, `CompleteObject`, `OptionalClass`, `Shared`, `OptionalShared`, `AggregateOptional`, `Array` | Shared lowering realizes certified plan only; no backend activation discovery | E08, E14, E15; — | LA04 |
-| Exported `main` entry wrapper | `lower.rs::entry_wrapper` | Target entry ABI plus explicit runtime-marker/initializer/entry/finalizer calls; preserve entry result across shutdown; no synthetic trace frame | E02, E14; — | LA03 minimal, LA04 lifecycle |
+| Exported `main` entry wrapper | `backend/lowering/entry.rs` | Target entry ABI plus explicit runtime-marker/initializer/entry/finalizer calls; preserve entry result across shutdown; no synthetic trace frame | E02, E14 plus LM16 failure/trace evidence; — | LA03 minimal; complete lifecycle delivered by LM16 |
 | External declared callees | `symbol.rs`, `lower/call.rs`; external link inventory | Symbol reference/signature only, no body; existing scalar C ABI and runtime marker preserved | E02, E11; — | LA03/LA04 by shape |
 
 Runtime call inventory is `ska_rt_alloc`, `ska_rt_free`, `ska_rt_panic`,
@@ -802,8 +802,9 @@ complete projection preserves only typed all-zero inactive storage. Independent
 checking rejects missing storage, lifecycle promotion, forged data identities,
 relocation categories/addends and invalid roots. Shared data lowering consumes
 these exact recipes, and completion receipts reconcile generated dependencies
-without retaining executable drafts. Executing complex helpers, descriptors and
-static lifecycle remains assigned to LM05–LM17.
+without retaining executable drafts. LM05–LM16 now execute the planned helpers,
+descriptors and static lifecycle; LM17 owns the remaining cross-cutting trace
+and artifact-closure reconciliation.
 
 ### Complete-fact checkpoint
 
@@ -825,7 +826,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Array copy/assignment/destruction, seven universal generated array helpers and the primitive slice-assignment helper | Element lifecycle facts plus canonical recursive helper declarations/dependencies | Six lifecycle families delivered by LM13; range clone and primitive slice assignment delivered by LM14 |
 | Indexed construction, element lists, slices and array aliases | Array layouts, operation identities and failure-message resources | Delivered by LM14 |
 | String literals, panic slices and five standard I/O operations | Literal recipes, runtime service signatures/effects and failure data | Delivered by LM15 |
-| Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | LM16 |
+| Active static initialization, reverse shutdown, retained-inactive storage and process entry | Certified dispositions, activation/shutdown records, coordinators and complete/reachable roots | Delivered by LM16 |
 | Enabled/omitted tracing, TLS, metadata, all data definitions and artifact closure | Owned trace facts, exact initializers/relocations, generated receipts and typed root/dependency sets | LM17 |
 
 The combined plan regression exercises an aggregate hidden result, all three

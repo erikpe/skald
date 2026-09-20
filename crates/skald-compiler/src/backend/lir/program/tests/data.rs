@@ -214,7 +214,7 @@ fn active_statics_require_initializers_in_both_artifact_policies() {
 }
 
 #[test]
-fn complete_mode_permits_typed_inactive_static_references_but_not_initialization() {
+fn complete_mode_materializes_typed_inactive_static_as_checked_zero_data() {
     let fixture = crate::test_support::lower_source_to_complete_final_mir_with_sources(
         "inactive-static.ska",
         "class State { static live: i64 = 1; static inactive: i64 = 2; init() {} }\n\
@@ -245,11 +245,10 @@ fn complete_mode_permits_typed_inactive_static_references_but_not_initialization
     );
 
     let mut work = ProgramBuilder::new(plan.view());
-    assert_eq!(
-        error(work.define_data(definition(
-            DataKey::Static(inactive.field),
-            DataInitializer::Zero(8),
-        ))),
-        ProgramError::Plan(PlanError::InvalidDomain)
-    );
+    work.define_data(definition(
+        DataKey::Static(inactive.field),
+        DataInitializer::Zero(8),
+    ))
+    .unwrap();
+    assert!(work.finish().is_err());
 }

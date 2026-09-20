@@ -1017,3 +1017,73 @@ fn source_panic_string_bytes_execute_with_both_trace_policies() {
         );
     }
 }
+
+#[test]
+fn static_lifecycle_executes_through_both_artifact_and_trace_policies() {
+    let source = concat!(
+        "class Item {value:i64;init(value:i64){self.value=value;}destroy{}}",
+        "class State {static item:Item=Item(5);static maybe:Item?=Item(6);",
+        "static owner:shared Item=new Item(7);",
+        "static maybe_owner:shared? Item=new Item(8);",
+        "static values:i64[]=i64[]{9};init(){}}",
+        "fn main()->i64{return State.item.value+State.maybe!.value+",
+        "State.owner->value+State.maybe_owner!->value+State.values[0]+7;}"
+    );
+    for trace in [RuntimeTracePolicy::Omitted, RuntimeTracePolicy::Enabled] {
+        for reachable in [false, true] {
+            let fixture = fixture(MirMode::Default, source);
+            let assembly = compile(&fixture, trace, reachable)
+                .unwrap_or_else(|error| panic!("{trace:?}/reachable={reachable}: {error}"));
+            assert!(assembly.contains(".section .bss\n"));
+            assert_runtime_exit(&assembly, trace, 42);
+        }
+    }
+}
+
+#[test]
+fn static_lifecycle_failures_keep_source_frames_and_exclude_coordinators() {
+    let cases = [
+        (
+            concat!(
+                "fn fail()->i64{var zero:i64=0;return 1/zero;}",
+                "class State {static value:i64=fail();init(){}}",
+                "fn main()->i64{return State.value;}"
+            ),
+            "integer division by zero",
+            "main::fail",
+            "main::main",
+        ),
+        (
+            concat!(
+                "class Bomb {value:i64;init(){self.value=1;} destroy {var zero:i64=0;self.value=self.value/zero;}}",
+                "class State {static bomb:Bomb=Bomb();init(){}}",
+                "fn main()->i64{var value:i64=State.bomb.value;var absent:i64?=none;return value+absent!;}"
+            ),
+            "optional value is absent",
+            "main::main",
+            "Bomb.destroy",
+        ),
+        (
+            concat!(
+                "class Bomb {value:i64;init(){self.value=1;} destroy {var zero:i64=0;self.value=self.value/zero;}}",
+                "class State {static bomb:Bomb=Bomb();init(){}}",
+                "fn main()->i64{return State.bomb.value+41;}"
+            ),
+            "integer division by zero",
+            "Bomb.destroy",
+            "Coordinator",
+        ),
+    ];
+
+    for (source, message, included_frame, excluded_frame) in cases {
+        let fixture = fixture(MirMode::Default, source);
+        let assembly = compile(&fixture, RuntimeTracePolicy::Enabled, true).unwrap();
+        let output = run_native_assembly_with_runtime_trace_probe(&assembly);
+        assert_eq!(output.status.code(), Some(1), "{output:?}");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(stderr.contains(message), "{stderr}");
+        assert!(stderr.contains(included_frame), "{stderr}");
+        assert!(!stderr.contains(excluded_frame), "{stderr}");
+        assert!(!stderr.contains("Coordinator"), "{stderr}");
+    }
+}

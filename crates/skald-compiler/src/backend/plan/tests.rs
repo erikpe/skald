@@ -722,44 +722,6 @@ fn incomplete_domains_references_and_dispatch_slots_are_rejected() {
     rejected(invalid, PlanError::UnknownDeclaration);
 }
 
-fn minimal_semantic_facts() -> PlanFacts {
-    let mut supplied = facts();
-    supplied.semantic = SemanticFacts {
-        types: vec![
-            TypeLayoutBinding {
-                ty: SemanticType::U64,
-                layout: LayoutId::new(0),
-            },
-            TypeLayoutBinding {
-                ty: SemanticType::Shared(SharedTarget::Obj),
-                layout: LayoutId::new(0),
-            },
-        ],
-        shared_header: Some(SharedHeaderLayout {
-            handle_layout: LayoutId::new(0),
-            owner_count_offset: 0,
-            dynamic_metadata_offset: 8,
-            header_size: 16,
-        }),
-        object_views: vec![ObjectViewFact {
-            target: ObjectViewTarget::Obj,
-            components: vec![
-                ObjectComponent::StaticAddress,
-                ObjectComponent::CompleteAddress,
-                ObjectComponent::DynamicMetadata,
-            ],
-            members: vec![],
-        }],
-        method_slots: vec![MethodSlotFact {
-            slot: MethodSlot::Finalizer,
-            index: 0,
-            byte_offset: 0,
-        }],
-        ..SemanticFacts::default()
-    };
-    supplied
-}
-
 #[test]
 fn semantic_catalog_is_target_portable_and_requires_dynamic_view_metadata() {
     let supplied = minimal_semantic_facts();

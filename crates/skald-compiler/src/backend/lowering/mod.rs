@@ -23,6 +23,7 @@ mod origin;
 mod ownership;
 mod place;
 mod scalar;
+mod static_lifecycle;
 mod strings;
 mod trace;
 mod worklist;

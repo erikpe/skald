@@ -142,15 +142,6 @@ impl<'p> ProgramBuilder<'p> {
         if self.data.contains_key(&definition.key) {
             return Err(ProgramError::DuplicateDefinition);
         }
-        if let DataKey::Static(field) = definition.key {
-            if self.parent.static_storage_disposition(field)
-                == Some(crate::backend::plan::StaticStorageDisposition::RetainedInactive)
-            {
-                return Err(ProgramError::Plan(
-                    crate::backend::plan::PlanError::InvalidDomain,
-                ));
-            }
-        }
         let references = data::check(&definition, self.parent, |key, category| {
             data::parent_artifact(self.parent, key, category)
         })?;

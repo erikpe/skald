@@ -36,6 +36,7 @@ pub(super) fn project(
         dependencies: entry_dependencies,
     });
     declare_generated_resources(input, facts)?;
+    complete_static_coordinator_dependencies(facts)?;
     declare_metadata(input, facts)?;
     declare_literals(input, program, facts)?;
     declare_failure_messages(facts)?;
@@ -518,6 +519,51 @@ fn declare_generated_resources(
     }
     declare_raw_class_copy_dependencies(input.program(), facts, &classes)?;
     declare_array_lifecycle_dependencies(facts)?;
+    Ok(())
+}
+
+fn complete_static_coordinator_dependencies(facts: &mut PlanFacts) -> Result<(), PlanError> {
+    let target = LirCallableId::Coordinator(Coordinator::Finalizer);
+    if !facts
+        .resources
+        .generated
+        .iter()
+        .any(|generated| generated.callable == target)
+    {
+        return Ok(());
+    }
+    let shutdown = facts.resources.shutdown.clone();
+    let mut dependencies = BTreeSet::new();
+    for region in shutdown {
+        dependencies.extend(match region.cleanup {
+            StaticCleanupFact::None => BTreeSet::new(),
+            StaticCleanupFact::Class(class) => [class_helper_dependency(
+                facts,
+                class,
+                HelperFamily::ClassFinalizer,
+            )?]
+            .into_iter()
+            .collect(),
+            StaticCleanupFact::Optional(optional) => {
+                optional_cleanup_dependencies(facts, optional)?
+            }
+            StaticCleanupFact::Shared(_) => {
+                [owner_helper_dependency(facts, HelperFamily::Release)?]
+                    .into_iter()
+                    .collect()
+            }
+            StaticCleanupFact::Array(array) => [array_helper_dependency(
+                facts,
+                array,
+                HelperFamily::ArrayRelease,
+            )?]
+            .into_iter()
+            .collect(),
+        });
+    }
+    for dependency in dependencies {
+        add_generated_dependency(facts, target, dependency);
+    }
     Ok(())
 }
 

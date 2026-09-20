@@ -1,6 +1,6 @@
 use super::*;
 use crate::backend::plan::{
-    test_fixtures::{facts, source},
+    test_fixtures::{facts, minimal_semantic_facts, source},
     CheckedPlan, Component, ComponentRole, LayoutDisposition, LayoutFact, PlanError, ReturnShape,
     ScalarType,
 };

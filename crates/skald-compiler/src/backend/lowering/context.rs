@@ -196,6 +196,11 @@ pub(super) fn definition<'plan>(
     let program = admitted.program();
     match callable {
         CallableId::Function(id) => program.definitions.get(id).map(MirDefinitionRef::Function),
+        CallableId::StaticInitializer(id) => program
+            .static_lifecycle
+            .as_ref()
+            .and_then(|lifecycle| lifecycle.initializers().iter().find(|body| body.id == id))
+            .map(MirDefinitionRef::from),
         _ => program
             .member_definition(callable)
             .map(MirDefinitionRef::Member),

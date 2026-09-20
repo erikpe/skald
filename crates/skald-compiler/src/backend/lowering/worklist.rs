@@ -17,6 +17,9 @@ pub(in crate::backend) fn lower_next<'plan>(
     let body = match key {
         LirCallableId::Source(_) => Lowerer::new(admitted, owner)?.finish()?,
         LirCallableId::Entry => super::entry::lower(admitted, owner)?,
+        LirCallableId::Coordinator(coordinator) => {
+            super::static_lifecycle::lower(admitted, owner, coordinator)?
+        }
         LirCallableId::Helper(key)
             if key.family == crate::backend::plan::HelperFamily::ClassFinalizer =>
         {

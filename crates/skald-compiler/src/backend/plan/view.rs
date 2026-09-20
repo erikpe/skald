@@ -218,6 +218,19 @@ impl<'plan> PlanView<'plan> {
     ) -> bool {
         self.plan.active_statics.contains(&field)
     }
+
+    pub(in crate::backend) fn permits_static_reference(
+        self,
+        field: crate::identity::StaticFieldId,
+    ) -> bool {
+        match self.static_storage_disposition(field) {
+            Some(super::StaticStorageDisposition::Active) => true,
+            Some(super::StaticStorageDisposition::RetainedInactive) => {
+                self.artifact_policy() == super::ArtifactPolicy::Complete
+            }
+            None => false,
+        }
+    }
 }
 
 #[cfg_attr(not(test), allow(dead_code))]

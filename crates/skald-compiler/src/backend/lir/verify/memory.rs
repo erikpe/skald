@@ -100,7 +100,7 @@ pub(super) fn access(
             Some((draft.objects.get_id(object)?.layout, offset))
         }
         AddressProvenance::Static { field, offset } => {
-            if !view.is_active_static(field) {
+            if !view.permits_static_reference(field) {
                 return Err(BuildError::InvalidMemory);
             }
             let declaration = view.artifact(

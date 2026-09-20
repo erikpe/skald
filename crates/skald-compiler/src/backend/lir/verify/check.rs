@@ -150,7 +150,7 @@ pub(in crate::backend) fn verify_callable(
                         record(
                             location,
                             Reason::InvalidReference,
-                            if draft.owner.context().is_active_static(*field) {
+                            if draft.owner.context().permits_static_reference(*field) {
                                 Ok(())
                             } else {
                                 Err(BuildError::InvalidMemory)
@@ -310,7 +310,7 @@ fn effect_references(
                 let key = ArtifactId::Data(DataKey::Static(*field));
                 let view = draft.owner.context();
                 view.artifact(view.artifact_id(key)?, ArtifactCategory::Data)?;
-                if !view.is_active_static(*field) {
+                if !view.permits_static_reference(*field) {
                     return Err(BuildError::InvalidMemory);
                 }
                 references.insert(key);

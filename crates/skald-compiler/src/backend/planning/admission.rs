@@ -12,9 +12,6 @@ fn unsupported(callable: Option<CallableId>, reason: impl Into<String>) -> Admis
 /// An exhaustive whitelist of executable forms; new MIR forms require review.
 pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     let program = input.program();
-    if !input.active_static_fields().is_empty() {
-        return Err(unsupported(None, "active static storage"));
-    }
     // Complete emission retains every declared generated lifecycle family.
     // Class metadata, copy helpers, finalizers and shared-owner helpers are
     // complete; wrapper/container helper families remain staged separately.
@@ -43,6 +40,7 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
                 | BackendRequiredRuntimeEntity::ArrayLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalLifecycle(_)
                 | BackendRequiredRuntimeEntity::OptionalBoxLayout(_)
+                | BackendRequiredRuntimeEntity::StaticStorage(_)
                 | BackendRequiredRuntimeEntity::LiteralBacking(_)
         ) {
             return Err(unsupported(
@@ -53,9 +51,6 @@ pub(super) fn check(input: BackendInput<'_>) -> Result<(), AdmissionError> {
     }
     for definition in program.executable_definitions() {
         let owner = Some(definition.callable());
-        if matches!(definition, MirDefinitionRef::StaticInitializer(_)) {
-            return Err(unsupported(owner, "static initializer body"));
-        }
         for storage in definition.storage_entries() {
             payload(program, storage.ty, owner)?;
             if !matches!(

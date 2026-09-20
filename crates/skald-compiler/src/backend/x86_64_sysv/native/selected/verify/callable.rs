@@ -196,6 +196,11 @@ impl Verifier {
                             return Err("noncanonical native return ABI")
                         }
                         Opcode::SymbolAddress { symbol, out } => {
+                            if let ArtifactId::Data(crate::backend::plan::DataKey::Static(field)) =
+                                symbol
+                            {
+                                definitions.push((out.value, AddressDefinition::Static(*field)));
+                            }
                             if let RepresentationKind::CodeAddress(signature) =
                                 out.representation.kind
                             {
@@ -293,7 +298,7 @@ impl Verifier {
             }
         }
         let mut constants = BTreeMap::new();
-        let mut addresses: BTreeMap<SelectedValueId, (SelectedObjectId, usize)> = BTreeMap::new();
+        let mut addresses: BTreeMap<SelectedValueId, (AddressRoot, usize)> = BTreeMap::new();
         for (out, definition) in &definitions {
             if let AddressDefinition::Constant(Some(value)) = definition {
                 constants.insert(*out, *value);
@@ -303,7 +308,8 @@ impl Verifier {
             let before = addresses.len();
             for (out, definition) in &definitions {
                 let address = match definition {
-                    AddressDefinition::Object(object) => Some((*object, 0)),
+                    AddressDefinition::Object(object) => Some((AddressRoot::Object(*object), 0)),
+                    AddressDefinition::Static(field) => Some((AddressRoot::Static(*field), 0)),
                     AddressDefinition::Offset(base, offset) => {
                         addresses.get(base).and_then(|(object, base)| {
                             constants
@@ -348,16 +354,13 @@ impl Verifier {
             }
         }
         for (value, bytes, alignment, region) in accesses {
-            if matches!(region, MemoryRegion::Static(_)) {
-                return Err("native static memory provenance requires a static recipe");
-            }
             if let MemoryRegion::Object(object) = region {
                 let (actual, offset) = addresses
                     .get(&value)
                     .ok_or("unproven native object memory access")?;
                 let layout = objects.get(&object).ok_or("unknown native memory object")?;
                 if alignment == 0
-                    || *actual != object
+                    || *actual != AddressRoot::Object(object)
                     || layout.alignment < alignment
                     || offset % alignment != 0
                     || offset
@@ -365,6 +368,43 @@ impl Verifier {
                         .is_none_or(|end| end > layout.size)
                 {
                     return Err("native object memory access is out of bounds or misaligned");
+                }
+            }
+            if let MemoryRegion::Static(field) = region {
+                let (actual, offset) = addresses
+                    .get(&value)
+                    .ok_or("unproven native static memory access")?;
+                let plan = context.catalog().plan();
+                let declaration = plan
+                    .artifact(
+                        plan.artifact_id(ArtifactId::Data(crate::backend::plan::DataKey::Static(
+                            field,
+                        )))
+                        .map_err(|_| "unknown native static storage")?,
+                        crate::backend::plan::ArtifactCategory::Data,
+                    )
+                    .map_err(|_| "unknown native static storage")?;
+                let layout = plan
+                    .layout(
+                        plan.layout_id(
+                            declaration
+                                .layout
+                                .ok_or("missing native static storage layout")?
+                                .index(),
+                        )
+                        .map_err(|_| "unknown native static storage layout")?,
+                    )
+                    .map_err(|_| "unknown native static storage layout")?;
+                if alignment == 0
+                    || *actual != AddressRoot::Static(field)
+                    || !plan.permits_static_reference(field)
+                    || layout.alignment < alignment
+                    || offset % alignment != 0
+                    || offset
+                        .checked_add(bytes)
+                        .is_none_or(|end| end > layout.size)
+                {
+                    return Err("native static memory access is out of bounds or misaligned");
                 }
             }
         }
@@ -388,5 +428,12 @@ impl Verifier {
 enum AddressDefinition {
     Constant(Option<u64>),
     Object(SelectedObjectId),
+    Static(crate::identity::StaticFieldId),
     Offset(SelectedValueId, SelectedValueId),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AddressRoot {
+    Object(SelectedObjectId),
+    Static(crate::identity::StaticFieldId),
 }

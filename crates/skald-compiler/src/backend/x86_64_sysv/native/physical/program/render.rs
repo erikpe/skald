@@ -68,6 +68,9 @@ pub(super) fn data(
 }
 
 pub(super) fn data_section(definition: &DataDefinition) -> &'static str {
+    if matches!(definition.key, crate::backend::plan::DataKey::Static(_)) {
+        return ".section .bss\n";
+    }
     if definition
         .initializers
         .iter()

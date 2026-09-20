@@ -1,7 +1,12 @@
 use super::*;
 use crate::backend::effects::{Effect, Effects};
 use crate::backend::graph::GraphLocation;
-use crate::backend::plan::{ArtifactDeclaration, ArtifactId, DataKey};
+use crate::backend::plan::{
+    ArtifactDeclaration, ArtifactId, ArtifactRootFact, ArtifactRootReason, DataFact,
+    DataInitializerFact, DataKey, DataPurpose, PlanFacts, SemanticType, StaticActivationFact,
+    StaticActivationKind, StaticCleanupFact, StaticShutdownFact, StaticStorageDisposition,
+    StaticStorageFact, TypeLayoutBinding,
+};
 use crate::backend::{RuntimeTracePolicy, Target};
 fn reasons(draft: CallableDraft<'_>) -> Vec<VerificationReason> {
     verify_callable(draft)
@@ -432,23 +437,61 @@ fn mandatory_effects_are_recomputed_and_terminal_summaries_cannot_disappear() {
 #[test]
 fn static_domain_is_checked_in_complete_mode_and_receipts_collect_actual_references() {
     use crate::identity::{ClassId, StaticFieldId};
-    let mut f = facts();
     let field = StaticFieldId::new(ClassId::new(0), 0);
-    let layout = f
-        .add_layout(LayoutFact {
-            size: 8,
-            alignment: 8,
-            disposition: LayoutDisposition::Addressable,
-        })
-        .unwrap();
     let key = ArtifactId::Data(DataKey::Static(field));
-    f.artifacts.push(ArtifactDeclaration {
-        key,
-        signature: None,
-        layout: Some(layout),
-    });
-    f.active_statics.insert(field);
-    let plan = CheckedPlan::check(f.clone()).unwrap();
+    fn static_facts(field: StaticFieldId, disposition: StaticStorageDisposition) -> PlanFacts {
+        let mut facts = minimal_semantic_facts();
+        let layout = facts.semantic.types[0].layout;
+        facts.semantic.types.push(TypeLayoutBinding {
+            ty: SemanticType::I64,
+            layout,
+        });
+        facts.artifacts.push(ArtifactDeclaration {
+            key: ArtifactId::Data(DataKey::Static(field)),
+            signature: None,
+            layout: Some(layout),
+        });
+        facts.resources.statics.push(StaticStorageFact {
+            field,
+            ty: SemanticType::I64,
+            layout,
+            disposition,
+        });
+        facts.resources.data.push(DataFact {
+            key: DataKey::Static(field),
+            purpose: DataPurpose::StaticStorage(disposition),
+            layout,
+            initializers: vec![DataInitializerFact::Zero(8)],
+            dependencies: Default::default(),
+        });
+        for index in 0..2 {
+            let root = ArtifactRootFact {
+                artifact: ArtifactId::Callable(source(index)),
+                reason: ArtifactRootReason::CompleteDefinition,
+            };
+            facts.resources.complete_roots.insert(root);
+            facts.resources.reachable_roots.insert(root);
+        }
+        let storage_root = ArtifactRootFact {
+            artifact: ArtifactId::Data(DataKey::Static(field)),
+            reason: ArtifactRootReason::StaticStorage(field),
+        };
+        facts.resources.complete_roots.insert(storage_root);
+        if disposition == StaticStorageDisposition::Active {
+            facts.active_statics.insert(field);
+            facts.resources.activation.push(StaticActivationFact {
+                field,
+                action: StaticActivationKind::ZeroDefault,
+            });
+            facts.resources.shutdown.push(StaticShutdownFact {
+                field,
+                cleanup: StaticCleanupFact::None,
+            });
+            facts.resources.reachable_roots.insert(storage_root);
+        }
+        facts
+    }
+    let plan = CheckedPlan::check(static_facts(field, StaticStorageDisposition::Active)).unwrap();
     fn build(plan: &CheckedPlan, key: ArtifactId) -> CallableDraft<'_> {
         let mut b = builder(plan);
         let e = entry_block(&mut b);
@@ -464,9 +507,13 @@ fn static_domain_is_checked_in_complete_mode_and_receipts_collect_actual_referen
     }
     let body = verify_callable(build(&plan, key)).unwrap();
     assert!(body.receipt().references().contains(&key));
-    f.active_statics.clear();
-    let inactive = CheckedPlan::check(f).unwrap();
-    assert!(reasons(build(&inactive, key)).contains(&VerificationReason::InvalidReference));
+    let inactive = CheckedPlan::check(static_facts(
+        field,
+        StaticStorageDisposition::RetainedInactive,
+    ))
+    .unwrap();
+    let body = verify_callable(build(&inactive, key)).unwrap();
+    assert!(body.receipt().references().contains(&key));
 }
 #[test]
 fn omitted_trace_records_and_enabled_orphan_records_are_not_published() {

@@ -1,4 +1,4 @@
-//! Process boundary: runtime ABI marker, language entry, preserved scalar result.
+//! Process boundary: ABI marker, static lifecycle, and preserved language result.
 use super::LowerError;
 use crate::backend::{
     lir::{
@@ -19,29 +19,53 @@ pub(super) fn lower<'plan>(
     let entry = builder.reserve_block()?;
     builder.define_block(entry, &[])?;
     builder.set_entry(entry)?;
-    // Admission excludes statics; neither lifecycle coordinator is required.
-    for target in [
+    call(
+        plan,
+        &mut builder,
+        entry,
         ArtifactId::Runtime(RuntimeService::AbiMarker),
+    )?;
+    let initializer = ArtifactId::Callable(LirCallableId::Coordinator(
+        crate::backend::plan::Coordinator::Initializer,
+    ));
+    if plan.artifact_id(initializer).is_ok() {
+        call(plan, &mut builder, entry, initializer)?;
+    }
+    let results = call(
+        plan,
+        &mut builder,
+        entry,
         ArtifactId::Callable(LirCallableId::Source(
             admitted.program().entry_function.into(),
         )),
-    ] {
-        let signature = plan
-            .artifact(plan.artifact_id(target)?, target.category())?
-            .signature
-            .ok_or(PlanError::InvalidSignature)?;
-        let results = builder.append(
-            entry,
-            Operation::Call(Call {
-                target: CallTarget::Direct(target),
-                signature,
-                arguments: vec![],
-                attribution: CallAttribution::ProcessBoundary,
-            }),
-        )?;
-        if matches!(target, ArtifactId::Callable(_)) {
-            builder.terminate(entry, Terminator::Return(results))?;
-        }
+    )?;
+    let finalizer = ArtifactId::Callable(LirCallableId::Coordinator(
+        crate::backend::plan::Coordinator::Finalizer,
+    ));
+    if plan.artifact_id(finalizer).is_ok() {
+        call(plan, &mut builder, entry, finalizer)?;
     }
+    builder.terminate(entry, Terminator::Return(results))?;
     verify_callable(builder.finish()).map_err(LowerError::Verification)
+}
+
+fn call<'plan>(
+    plan: crate::backend::plan::PlanView<'plan>,
+    builder: &mut DraftBuilder<'plan>,
+    block: crate::backend::lir::BlockHandle<'plan>,
+    target: ArtifactId,
+) -> Result<Vec<crate::backend::lir::ValueHandle<'plan>>, LowerError> {
+    let signature = plan
+        .artifact(plan.artifact_id(target)?, target.category())?
+        .signature
+        .ok_or(PlanError::InvalidSignature)?;
+    Ok(builder.append(
+        block,
+        Operation::Call(Call {
+            target: CallTarget::Direct(target),
+            signature,
+            arguments: vec![],
+            attribution: CallAttribution::ProcessBoundary,
+        }),
+    )?)
 }

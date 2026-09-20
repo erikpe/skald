@@ -2,7 +2,7 @@
 use super::LowerError;
 use crate::backend::{
     lir::{DataDefinition, DataInitializer, ProgramBuilder},
-    plan::{DataInitializerFact, StaticStorageDisposition},
+    plan::DataInitializerFact,
     planning::AdmittedProgram,
 };
 
@@ -11,14 +11,6 @@ pub(super) fn define(
     worklist: &mut ProgramBuilder<'_>,
 ) -> Result<(), LowerError> {
     for fact in &admitted.plan().view().resources().data {
-        if matches!(
-            fact.purpose,
-            crate::backend::plan::DataPurpose::StaticStorage(
-                StaticStorageDisposition::RetainedInactive
-            )
-        ) {
-            continue;
-        }
         let initializers = fact
             .initializers
             .iter()

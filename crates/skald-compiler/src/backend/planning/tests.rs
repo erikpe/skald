@@ -69,7 +69,7 @@ fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
 }
 
 #[test]
-fn artifact_policy_cannot_hide_unsupported_static_lifecycle() {
+fn static_storage_is_admitted_under_both_artifact_policies() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "excluded.ska",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
@@ -78,10 +78,14 @@ fn artifact_policy_cannot_hide_unsupported_static_lifecycle() {
         BackendInput::without_runtime_trace(&fixture.mir),
         BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
-        let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
-            panic!("unsupported retained owner body must reject")
-        };
-        assert!(!reason.reason.is_empty());
+        let admitted = admit(input).expect("static storage is supported");
+        assert!(admitted
+            .plan()
+            .view()
+            .resources()
+            .statics
+            .iter()
+            .any(|fact| fact.disposition == StaticStorageDisposition::Active));
     }
 }
 
@@ -179,18 +183,21 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
 }
 
 #[test]
-fn static_lifecycle_rejects_before_plan_publication() {
+fn static_lifecycle_is_admitted_with_frozen_activation_authority() {
     let fixture = fixture(
-        "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
+        "class State { static count: i64 = 4; init() {} } fn main() -> i64 { return State.count; }",
     );
     for input in [
         BackendInput::without_runtime_trace(&fixture.mir),
         BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
-        let Err(AdmissionError::Unsupported(reason)) = admit(input) else {
-            panic!("static lifecycle fixture admitted")
-        };
-        assert!(!reason.reason.is_empty());
+        let admitted = admit(input).expect("static lifecycle is supported");
+        let resources = admitted.plan().view().resources();
+        assert_eq!(resources.activation.len(), 1);
+        assert_eq!(resources.activation[0].field, resources.statics[0].field);
+        assert_eq!(resources.shutdown.len(), 1);
+        assert_eq!(resources.shutdown[0].field, resources.statics[0].field);
+        assert_eq!(resources.shutdown[0].cleanup, StaticCleanupFact::None);
     }
 }
 

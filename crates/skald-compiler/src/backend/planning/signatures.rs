@@ -150,6 +150,14 @@ pub(super) fn declaration_inventory(
                 .map(|d| (d.id.into(), d.kind != MirMethodKind::Static)),
         );
     }
+    if let Some(lifecycle) = &program.static_lifecycle {
+        declarations.extend(
+            lifecycle
+                .initializers()
+                .iter()
+                .map(|body| (body.id.into(), false)),
+        );
+    }
     declarations
 }
 
