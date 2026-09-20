@@ -8,15 +8,16 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmap is active. The next planned implementation program
-is LA05, after its focused architecture consolidation and adoption design is
-accepted.
+No implementation roadmap is active. The proposed
+[low-level compiler consolidation and adoption design](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md)
+must be reviewed and accepted before its LA05 implementation roadmap is created.
 
 ## Pending discovery and planning records
 
 | Record | Status | Purpose | Next step | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; LA01–LA04 and placement scalability complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Create the LA05 architecture consolidation and adoption design | Full private parity, scalable checked baseline placement and maintained coverage; adoption and allocation remain separate |
+| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; LA01–LA04 and placement scalability complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Review the proposed [LA05 consolidation and adoption design](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md) | Full private parity, scalable checked baseline placement and maintained coverage; adoption and allocation remain separate |
+| [Low-level compiler consolidation and adoption](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md) | Proposed LA05 design | Adopt one checked production pipeline, expose requested observations, accept foundation cost, retire direct lowering, and close the cumulative foundation review | Review, freeze, and promote the design before creating its roadmap | Complete private parity and placement scalability; LA06 register allocation remains separate |
 | [Low-level compiler migration coverage](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) | Full private parity complete | Maintain operation/helper coverage, phase authority, witnesses and baseline handoff through full migration and adoption | Carry the reconciled matrix into LA05 without clearing retained cost qualifications | Frozen model, complete private pipeline and durable baseline; adoption cost clearance remains pending |
 | [Auric port feasibility](AURIC_PORT_FEASIBILITY.md) | Actionable investigation | Assess a silent Oric emulator in Skald, including CPU/VIA/AY keyboard behavior, video, tape loading, and comparison with Doom | Select firmware/game images and validate CPU/bus throughput plus the shared framebuffer bridge | Existing byte arithmetic, arrays and aliases; proposed shared-array native bridge; external firmware and game images |
 | [Doom port feasibility](DOOM_PORT_FEASIBILITY.md) | Actionable investigation | Assess a Skald engine port with a small native platform library, including scope, language gaps, and division-helper evidence | Settle a minimal shared-array handle bridge and numerical helpers, then build the host/framebuffer spike | Existing arrays, I/O, primitive interop; optional 32-bit integer support |

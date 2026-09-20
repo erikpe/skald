@@ -5,7 +5,8 @@ the blocking D01/D02 placement scalability correction are complete. The
 [archived design](../archive/PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md),
 [completed roadmap](../archive/PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md), and
 [retained measurements](../development/PLACEMENT_CHECKING_PERFORMANCE.md)
-clear LA05 to begin with the architecture consolidation and adoption design.
+clear LA05 to begin with the proposed
+[architecture consolidation and adoption design](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md).
 The first child
 [phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen, and its
@@ -319,7 +320,7 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | LA02 | **[LIR model, construction, and verification](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, calls, mutation and dumps | Complete; [archived roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md). Executable checked models and current [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness) delivered | Common/selected readiness passed; concrete native counterparts remain LA03 |
 | LA03 | **[Target selection and physical realization](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md) (accepted, frozen and implemented):** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | Complete; [archived roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) delivers an executable checked scalar/control-flow/call pilot through every new phase | LA01–LA02; complete, with migration/adoption/allocation transferred to LA04–LA06 |
 | LA04 | **[Complete lowering migration](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md) (accepted, frozen and implemented):** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete; the [archived roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) delivers complete supported x86 behavior through LIR and stack placement, explicit operation/helper coverage and native parity | LA03 and durable migration ownership complete |
-| LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04 and D01/D02 placement-cost closure complete; portability review and full foundation validation remain in LA05 |
+| LA05 | **[Architecture consolidation and adoption](LOW_LEVEL_COMPILER_ADOPTION_DESIGN_PROPOSAL.md) (proposed):** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04 and D01/D02 placement-cost closure complete; portability review and full foundation validation remain in LA05 |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
 LA01 preparation is complete; its [archived roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md)
