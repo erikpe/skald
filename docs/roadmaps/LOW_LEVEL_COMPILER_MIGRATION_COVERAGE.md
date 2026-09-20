@@ -95,7 +95,7 @@ Retain the semantic expectations while adapting owners during migration.
 | E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
 | E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
 | E21 | [Generated retain ABI probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/helpers/tests.rs): `generated_retain_helper_aligns_the_stack_before_reporting_exhaustion`; demonstrated the unaligned overflow reporter call before its correction |
-| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): `source_execution_matrix_covers_mir_trace_and_artifact_policies`, `aggregate_lifecycle_checkpoint_crosses_every_policy_and_schedule`, `adversarial_numeric_boundaries_execute_through_the_verified_path`, `full_width_shift_count_reports_before_native_cl_narrowing`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
+| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): the two complete policy/schedule matrices; primitive/numeric/failure tests; aggregate, object, dispatch and C ABI pressure tests; class/shared/optional/box/array lifecycle tests; string/I/O/static lifecycle tests; requested-checkpoint and cross-process determinism tests. Exact matrix ownership is recorded in the private parity checkpoint below. |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -108,8 +108,8 @@ Exact selected leaves and their mode coverage are recorded below.
 Inventory references G01–G05 identify the original readiness gaps, now all
 closed by E17/E19/E20 and the selected mode table. Retain those references to
 connect the audited families to their added protection; they do not mark
-pending current-behavior work. Full-language new-pipeline delivery remains
-pending separately.
+pending current-behavior work. E22 supplies full-language private-pipeline
+delivery; production adoption remains LA05.
 
 ## MIR instruction inventory
 
@@ -117,10 +117,10 @@ Current owners below are relative to
 `crates/skald-compiler/src/backend/x86_64_sysv/`. They are source paths, not
 proposed module declarations. `lower.rs` dispatches all 42 variants.
 
-| `MirInstruction` members | Current owner | Future shared lowering obligation / invariant | Evidence | Gap | Delivery (pending) |
+| `MirInstruction` members | Current owner | Shared lowering obligation / invariant | Evidence | Gap | Delivery |
 | --- | --- | --- | --- | --- | --- |
 | `StorageLive`, `StorageDead` | `lower.rs`, `frame.rs` | Preserve lifetime information for addressable objects; current emission is a no-op, not machine liveness or permission to reuse storage | E01 | — | LA03 |
-| `Assign` | `lower/assignment.rs` and scalar/type/optional/array selectors | See exhaustive rvalue inventory; widths and canonical forms survive home removal | E01, E03 | G01, G02 | LA03 scalar; LA04 remaining rvalues |
+| `Assign` | `lower/assignment.rs` and scalar/type/optional/array selectors | See exhaustive rvalue inventory; widths and canonical forms survive home removal | E01, E03, E22 | G01, G02 | Delivered by LA03 and LM05–LM15 |
 | `Store` | `lower/value.rs` | Explicit place address and width-correct store; final-MIR authorization is not rechecked as source policy | E05 | — | LA03 scalar; LM05 checked complex places |
 | `Call` | `lower/call.rs`, `lower/call/*` | Stabilized target and ordered role-based components; ordinary/direct/static/indirect/method/interface forms; see call inventory | E02, E05, E13 | G03 | Delivered: LA03 direct/indirect scalar, LM05 aggregate/direct-member boundary, LM06 dynamic dispatch |
 | `Initialize` | `lower/call.rs` | Call the selected initializer into its final destination; receiver origin preserved | E05 | — | Delivered by LM06 |
@@ -145,7 +145,7 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 
 ## Rvalues, operations and places
 
-| `MirRvalueKind` members | Current owner | Future disposition / invariant | Evidence | Gap | Delivery (pending) |
+| `MirRvalueKind` members | Current owner | Disposition / invariant | Evidence | Gap | Delivery |
 | --- | --- | --- | --- | --- | --- |
 | `ConstantI64`, `ConstantU64`, `ConstantU8`, `ConstantF64Bits`, `ConstantBool` | `lower/assignment.rs` | Explicit scalar width/raw float bits; canonical bytes/booleans | E01, E02 | — | LA03 |
 | `CallableAddress` | `lower/assignment.rs`, `symbol.rs` | Typed code reference to exact eligible callable, not string resolution | E13, E15 | — | LA03 |
@@ -158,7 +158,7 @@ proposed module declarations. `lower.rs` dispatches all 42 variants.
 | `PrimitiveCast`, `CheckedF64ToInteger` | `lower/primitive_cast.rs` | Exact source/target cells; checked finite post-truncation range; preserve bits/canonical forms | E03 | — | LA03 |
 | `TypeTest` | `lower/type_operations.rs` | Runtime membership against planned metadata; exact static outcome already realized in MIR | E12 | — | Delivered by LM06 |
 | `OptionalPresence`, `OptionalBoxPresence` | `lower/optional/scalar.rs`, `lower/optional/access.rs` | Exact layer/kind, planned tag or niche, secured box owner | E08 | — | `OptionalPresence` delivered by LM10 and expanded by LM11; boxed presence delivered by LM11 |
-| `ArrayLength` | `lower/array.rs` | Length from exact planned descriptor/header representation | E09 | — | LA04 |
+| `ArrayLength` | `lower/array.rs` | Length from exact planned descriptor/header representation | E09, E22 | — | Delivered by LM12 |
 
 Scalar operation members are not additional opaque lifecycle operations:
 
@@ -182,18 +182,19 @@ Place bases: `StaticField`, `StaticLifecycleDestination`, `Storage`,
 `lower/array.rs`, and optional access helpers. Shared lowering materializes
 their addresses and origin components using checked plan facts; target selection
 must not follow nominal IDs back into MIR. E05/E08/E09/E12 cover these families;
-all complex-place delivery is pending LA04, with scalar storage/static addressing
-in the LA03 pilot. Zero-size/metadata-only types require an explicit LA02
-disposition; `Obj`/interface views and `unit` do not imply owning object slots.
+all complex-place forms are delivered by LM05, LM06, LM11 and LM14, with scalar
+storage/static addressing from the LA03 pilot. Zero-size/metadata-only types
+have explicit checked dispositions; `Obj`/interface views and `unit` do not
+imply owning object slots.
 
 ## Terminators and failures
 
 Current owner paths are again relative to the x86 target. Specialized selectors
 handle checked terminators before the basic `lower/terminator.rs` fallback.
 
-| `MirTerminator` members | Current owner | Future shared lowering obligation / invariant | Evidence | Gap | Delivery (pending) |
+| `MirTerminator` members | Current owner | Shared lowering obligation / invariant | Evidence | Gap | Delivery |
 | --- | --- | --- | --- | --- | --- |
-| `Return` | `lower/terminator.rs`, `lower/call/*` | Unit/scalar or previously materialized aggregate destination; result survives cleanup and trace pop | E02, E05, E06, E16 | G03 | LA03 scalar; LA04 aggregate |
+| `Return` | `lower/terminator.rs`, `lower/call/*` | Unit/scalar or previously materialized aggregate destination; result survives cleanup and trace pop | E02, E05, E06, E16, E22 | G03 | Delivered by LA03 and LM05 |
 | `ReturnShared`, `ReturnOptionalShared` | `lower/terminator.rs` | Transfer live owner or zero niche to caller, no hidden aggregate destination | E07, E08 | — | `ReturnShared` delivered by LM08; `ReturnOptionalShared` delivered by LM10 |
 | `Goto`, `Branch` | `lower/terminator.rs` | Explicit target CFG and canonical condition; stable entry/block ordering | E04 | G02 | LA03 |
 | `ShiftCountCheck` | `lower/shift.rs` | Success/failure edges before operation; reject count at selected width | E03 | — | LA03 |
@@ -204,7 +205,7 @@ handle checked terminators before the basic `lower/terminator.rs` fallback.
 | `OptionalUnwrap`, `OptionalSharedUnwrap` | `lower/optional/access.rs` | Success-only payload/owner transfer, absent failure with exact layer | E08 | — | Delivered by LM10 for primitive tagged and nullable shared-owner representations |
 | `BeginOptionalView`, `BeginOptionalBoxView` | `lower/optional/access.rs` | Success, absence and overflow are separate edges; pin exact state/owner | E08 | — | LM11 |
 | `CheckOptionalMutation` | `lower/optional/access.rs` | Pinned mutation reports; invalid internal pin state hard-traps | E08 | — | LM11 |
-| `ArrayPositionCheck`, `ArrayOperationCheck`, `ArrayLoop` | `lower/array.rs` | Valid position/failure relation, selected failure result, forward/reverse counted loop with explicit index state | E09, E10 | — | LA04 |
+| `ArrayPositionCheck`, `ArrayOperationCheck`, `ArrayLoop` | `lower/array.rs` | Valid position/failure relation, selected failure result, forward/reverse counted loop with explicit index state | E09, E10, E22 | — | Delivered by LM12–LM14 |
 | `Panic`, `Terminate` | `lower/terminator.rs` | Exact message/reason/location; ordered reporter, no unwind/extra cleanup | E03, E11, E16 | G05 mode handoff | Scalar failures delivered by LA03; source-string panic delivered by LM15 |
 
 All `MirTerminationReason` members are migration obligations:
@@ -216,7 +217,8 @@ Preserve current canonical messages and operation spans. Ownership-count
 exhaustion and shared allocation failure are also generated reporter paths;
 they are not additional `MirTerminationReason` variants. Invalid owner/header,
 guard underflow and violated verified helper preconditions remain hard defects.
-LA03/LA04 implement their respective failure paths and LA05 checks complete parity.
+LA03 and LM05–LM17 implement every failure path; E22 checks complete private
+parity. LA05 owns production integration and public error/reporting adapters.
 
 ## Array and I/O suboperations
 
@@ -266,8 +268,8 @@ recursive host calls or replaced with an opaque legacy assembly snippet.
 I/O members `StandardHandle`, `Open`, `Read`, `Write`, `Close` are dispatched in
 `lower/io.rs`. Shared lowering forms anchored buffers and ordered runtime calls;
 target selection assigns physical scalar/address arguments. E11 covers every
-exact runtime symbol, pointer/length handling and alignment. Delivery is pending
-LA04, with no additional current-behavior witness identified.
+exact runtime symbol, pointer/length handling and alignment. LM15 delivers all
+five operations; E22 exercises native success and error behavior.
 
 ## Calls, generated bodies, runtime services and data
 
@@ -280,21 +282,21 @@ not a universal ABI register list. Current `abi.rs`/`lower/call/marshal.rs`
 spill/marshal them alongside hidden result storage; future target planning
 classifies shapes, shared lowering materializes values, selection assigns ABI
 locations, and realization moves them. E02/E05/E07/E12/E13 are evidence;
-E19 closes G03's combined call witness gap. Delivery remains pending for
-LA03's pilot and LA04's full surface.
+E19 closes G03's combined call witness gap. LA03, LM05, LM06 and LM08–LM15
+deliver the complete call/value surface; E22 crosses it with native pressure.
 
-| Generated/external family | Current construction/domain | Future owner and invariant | Evidence / gap | Delivery (pending) |
+| Generated/external family | Current construction/domain | Owner and invariant | Evidence / gap | Delivery |
 | --- | --- | --- | --- | --- |
-| Ordinary source callable bodies | `lower.rs::lower_definition`; `executable_definitions()` includes function, static initializer, initializer, copy constructor, copy assignment, destructor, method bodies | Shared lowered callable; never recreate physically absent bodies from dense declarations | E15; — | LA03 pilot, LA04 full |
+| Ordinary source callable bodies | `lower.rs::lower_definition`; `executable_definitions()` includes function, static initializer, initializer, copy constructor, copy assignment, destructor, method bodies | Shared lowered callable; never recreate physically absent bodies from dense declarations | E15, E22; — | Delivered by LA03 and LM05–LM16 |
 | Seven helpers per array ID plus primitive slice assignment where applicable: element initializer, element copier, clone, slice clone, element destroyer, release, shared finalizer | `backend/lowering/generated_array/`; retained array types | Shared helper LIR/worklist, explicit recursive calls and retain/free effects; one owner per symbol | E09, E10; — | Six lifecycle families delivered by LM12–LM13; slice clone and primitive slice assignment delivered by LM14 |
 | Raw-address complete class copy wrappers | `backend/lowering/generated_array/lifecycle.rs`; retained class dependency closure from array element shapes | Shared helper construction with checked component shapes; recursion broken by ordinary calls | E06, E09; — | Delivered by LM13 |
 | Shared handle retain/release helpers | `lower/ownership/helpers.rs`; array element and static shutdown needs | Shared lowered graphs, inherited attribution and visible call clobbers; no source trace frame | E07, E16; G04 closed | Delivered by LM08 |
 | Complete class finalizers | `lower/finalize.rs::lower_all`; currently all classes | Shared expansion of destruction plan: `UserBody`, `Field`, `SharedField`, `OptionalSharedField`, `OptionalClassField`, `OptionalField`, `ArrayField`, `Base`; free remains with releasing caller | E06, E07; — | Delivered by LM07–LM08, LM11 and LM13 |
 | Exact optional-box finalizers | `lower/optional_box.rs`, `lower/finalize/optional.rs`; `exact_optional` box types | Shared recursive optional payload cleanup; same ordinary lifecycle/call pipeline | E08; G04 for caller | Delivered by LM11 and LM13, including inline-array payload cleanup |
 | Program initializer/finalizer | `backend/lowering/static_lifecycle.rs`; verified activation/shutdown coordinator | Shared lowered callables; `ZeroDefault` versus `Explicit` activation, exact reverse shutdown; transitions require no target runtime state | E14 plus shared lowering/native lifecycle tests; — | Delivered by LM16 |
-| Static cleanup shapes | `lower/static_lifecycle.rs`; `None`, `CompleteObject`, `OptionalClass`, `Shared`, `OptionalShared`, `AggregateOptional`, `Array` | Shared lowering realizes certified plan only; no backend activation discovery | E08, E14, E15; — | LA04 |
+| Static cleanup shapes | `lower/static_lifecycle.rs`; `None`, `CompleteObject`, `OptionalClass`, `Shared`, `OptionalShared`, `AggregateOptional`, `Array` | Shared lowering realizes certified plan only; no backend activation discovery | E08, E14, E15, E22; — | Delivered by LM16 |
 | Exported `main` entry wrapper | `backend/lowering/entry.rs` | Target entry ABI plus explicit runtime-marker/initializer/entry/finalizer calls; preserve entry result across shutdown; no synthetic trace frame | E02, E14 plus LM16 failure/trace evidence; — | LA03 minimal; complete lifecycle delivered by LM16 |
-| External declared callees | `symbol.rs`, `lower/call.rs`; external link inventory | Symbol reference/signature only, no body; existing scalar C ABI and runtime marker preserved | E02, E11; — | LA03/LA04 by shape |
+| External declared callees | `symbol.rs`, `lower/call.rs`; external link inventory | Symbol reference/signature only, no body; existing scalar C ABI and runtime marker preserved | E02, E11, E22; — | Delivered by LA03 and LM15 |
 
 Runtime call inventory is `ska_rt_alloc`, `ska_rt_free`, `ska_rt_panic`,
 `ska_rt_io_standard_handle`, `ska_rt_io_open`, `ska_rt_io_read`,
@@ -305,9 +307,9 @@ preconditions retain hard-defect handling; I/O returns status to ordinary
 checked library code. User external symbols remain their own reviewed C ABI.
 No new runtime service or marker revision is implied by this migration.
 
-| Artifact family/root | Current owner | Future responsibility / invariant | Evidence | Delivery (pending) |
+| Artifact family/root | Current owner | Responsibility / invariant | Evidence | Delivery |
 | --- | --- | --- | --- | --- |
-| Required runtime entities: `ClassDispatch`, `VirtualFamily`, `InterfaceRequirement`, `FunctionType`, `ArrayLifecycle`, `OptionalLifecycle`, `OptionalBoxLayout`, `StaticStorage`, `LiteralBacking` | `backend/retained_domain.rs`, `planning.rs` | Checked plan consumes narrow certified queries, never analysis internals or mutable certificates | E15, E17 | LA02 planning contract, LA04 consumption |
+| Required runtime entities: `ClassDispatch`, `VirtualFamily`, `InterfaceRequirement`, `FunctionType`, `ArrayLifecycle`, `OptionalLifecycle`, `OptionalBoxLayout`, `StaticStorage`, `LiteralBacking` | `backend/retained_domain.rs`, `planning.rs` | Checked plan consumes narrow certified queries, never analysis internals or mutable certificates | E15, E17, E22 | Delivered by LM04–LM17 |
 | Class dispatch/interface witnesses, shared-array and optional-box descriptors | `dispatch.rs`, `layout.rs` | Shared plan identities/dependencies, target encoding; stable dense slots with null only for verified-unused selections | E08, E12, E15 | Class dispatch/interface data delivered by LM06; optional-box and array descriptors delivered by LM11–LM14 |
 | Writable static slots, including complete-mode inactive-field fallback | `static_fields.rs` | Certified active domain; fallback only for references in present complete-mode bodies; closure removes dead body/slot together | E14, E15 | Delivered by LM16/LM17 |
 | Immutable literal backings, including empty backing | `literal_data.rs`, `lower/strings.rs` | Canonical byte pooling/provenance and explicit metadata references | E11 | Delivered by LM15 |
@@ -324,7 +326,7 @@ equivalence evidence; it is not a hidden prerequisite for LA01.
 
 ## Trace, observation and error handoffs
 
-| Current responsibility | Current owner/evidence | Planned handoff and required check | Delivery (pending) |
+| Current responsibility | Current owner/evidence | Handoff and required check | Delivery |
 | --- | --- | --- | --- |
 | Source visibility, frame eligibility and initial location | `runtime_trace/activation.rs`, E16 | Shared checked plan/lowering; only eligible source bodies push; helpers inherit outer attribution | Delivered by LM17 |
 | Push/pop, call-site replacement, reporting-edge replacement | `runtime_trace/instrumentation.rs`, E16 | Shared ordered trace actions; selection expands explicit TLS/address operations, temporaries and clobbers before placement | Delivered by LA02/LA03 and completed by LM17 |
@@ -332,7 +334,7 @@ equivalence evidence; it is not a hidden prerequisite for LA01.
 | Call attribution: `SourceOperation`, `InheritedSourceOperation`, `SourceBodyFromOmittedHelper`, `NonReporting`, `HardDefectOnly`, `ProcessBoundary` | `lower/call/emission.rs`, E16 | Preserve all six meanings through lowered and selected calls; generated source-body entries remain distinct from helper inheritance | Delivered by LM17 |
 | Backend planning visits | `planning.rs`, E15/E14 | Current callable phases: `ArrayLegality`, `Legality`, `RuntimeTraceActivation`, `Frame`, `InstructionSelection`; static phases: `Declared`, `Active`, `Initializer`, `Finalizer`, `ConservativeFallback`, `Retained`, `Emitted`. Future phase-local observers preserve exact domains without driving semantics | LA02/LA03 interfaces, LA05 observations |
 | Request-local reporting and dump inspection | `reporting`, driver orchestration, E18; private verified checkpoint adapters, E22 | Phase-owned lowered/selected/physical/placement/frame dumps stream only when privately requested; quiet mode has no renderer and observation failure prevents publication. LA05 must add typed public events/adapters and requested-only metrics without fabricated events or timings in deterministic output | LA03 private adapters complete; LA05 production |
-| Source diagnostics and driver failure categories | Driver/reporting contract, E18 | Source errors remain frontend-owned; structured backend errors retain target/callable context; no error hidden by filtering or fallback | LA03/LA04 integration |
+| Source diagnostics and driver failure categories | Driver/reporting contract, E18 | Source errors remain frontend-owned; checked phase errors retain their owning context; no error is hidden by filtering or fallback | Private parity complete; LA05 public integration |
 | Invalid generated product, target mismatch, stale placement | No current LIR equivalent | Private stage/origin/local-location invariant failure; verifier-owned seals; not a new source error or emitted runtime trap | LA02 virtual verification, LA03 placement/physical checks |
 
 The new observation schema must distinguish checked planning, shared lowering,
@@ -346,15 +348,53 @@ This table records responsibilities; names are conceptual, not new Rust types.
 Private checked construction and full lowered callable publication are implemented.
 Complete lowered-program closure and parent-bound target declarations are implemented.
 Selected authority, checked placement/frame/physical publication and private
-native consumption are implemented for the admitted scalar surface.
+native consumption are implemented for the complete private language surface.
 
 | Product | Producer and permitted inputs | Publication obligations | Consumer authority | Observation/error obligation | Implementation owner |
 | --- | --- | --- | --- | --- | --- |
-| Checked target plan | Backend planning from `BackendInput` and immutable target facts | Valid runtime obligations/layout/component signatures; exact target/profile; fixed layout/signatures; generated inventories have explicit finalization owners | Narrow shared-lowering/selection views, no mutable MIR/certificate access | Planning domains and structured target/layout rejection | LA02/LA03 joint contract; LA04 full coverage |
-| Verified lowered LIR | Shared MIR/lifecycle/helper lowering plus checked plan | Closed callable CFG, single definitions/dominance/edge signatures, memory/effects/trace/artifact references; no opaque lifecycle operation or physical resource; final helper worklist before complete-program publication | Selection consumes immutable executable meaning without reading MIR; edits consume seal and reverify | Canonical dump, requested metrics, stage/origin verifier failure | LA02 schema/seals; LA03 pilot; LA04 full construction |
+| Checked target plan | Backend planning from `BackendInput` and immutable target facts | Valid runtime obligations/layout/component signatures; exact target/profile; fixed layout/signatures; generated inventories have explicit finalization owners | Narrow shared-lowering/selection views, no mutable MIR/certificate access | Planning domains and structured target/layout rejection | Delivered by LA02/LA03 and LM02–LM04 |
+| Verified lowered LIR | Shared MIR/lifecycle/helper lowering plus checked plan | Closed callable CFG, single definitions/dominance/edge signatures, memory/effects/trace/artifact references; no opaque lifecycle operation or physical resource; final helper worklist before complete-program publication | Selection consumes immutable executable meaning without reading MIR; edits consume seal and reverify | Canonical dump, requested metrics, stage/origin verifier failure | Delivered by LA02/LA03 and LM05–LM17 |
 | Verified selected LIR | Target selector plus lowered product and plan | All introduced CFG/calls/temporaries/clobbers/fixed/tied/resource constraints explicit; target/context bound; target-specific thunks equally verified | Placement consumes graph/operands/resources, no nominal source semantics | Canonical selected dump and target-selection/verification context | LA02 structural APIs; LA03 target schema/verifier |
 | Checked placement result | Baseline placer from exact selected callable and target resource descriptions | Independent legality/value-flow/transfer checking, exact snapshot binding, legal scratch/object/save requirements | Realization consumes placements and declared recipes; no reinterpretation of semantic operations | Placement dump, counts and stage/local-location defects | LA03 |
-| Verified physical code | Target realization from checked placement, frame requirements and target facts | No remaining virtual/frame references; legal instructions/offsets/edges, alignment/balance/saves and artifact references | Closure/rendering consume code/data references only; no selection, allocation or MIR queries | Independently requested frame/code/placement checkpoints, encoding limits and physical verifier defects | LA03 pilot complete; LA04 full; LA05 integration |
+| Verified physical code | Target realization from checked placement, frame requirements and target facts | No remaining virtual/frame references; legal instructions/offsets/edges, alignment/balance/saves and artifact references | Closure/rendering consume code/data references only; no selection, allocation or MIR queries | Independently requested frame/code/placement checkpoints, encoding limits and physical verifier defects | Full private coverage delivered; LA05 production integration |
+
+## Full private parity checkpoint
+
+The feature admission classifier has been removed. Checked planning projects
+the complete verified final-MIR program, and errors now come from the checked
+owner that detects an invalid layout, signature, graph, selection, placement,
+frame, recipe or closure. Exhaustive matches in shared lowering cover all 42
+`MirInstruction` variants, all 19 rvalues, all 20 terminators, all 29 array
+instructions and all five I/O operations listed above. Generated source,
+lifecycle/helper, entry/coordinator and data definitions close through one typed
+worklist and exact publication pipeline.
+
+The following E22 witnesses jointly form the required parity matrix. The first
+two cross both MIR schedules, both trace policies and both artifact policies;
+the remaining rows supply behavior and value-family dimensions that should not
+be multiplied into one excessively slow fixture.
+
+| Required dimension | Exact durable private-pipeline witnesses |
+| --- | --- |
+| Default/minimal MIR, enabled/omitted tracing, complete/reachable artifacts | `source_execution_matrix_covers_mir_trace_and_artifact_policies`, `aggregate_lifecycle_checkpoint_crosses_every_policy_and_schedule` |
+| Source, generated helper, entry and static coordinators | `class_copy_cleanup_and_nested_finalizers_execute_through_the_verified_path`, `nontrivial_array_element_lifecycle_executes_through_generated_helpers`, `static_lifecycle_executes_through_both_artifact_and_trace_policies` |
+| Scalar, aggregate result, receiver/origin, alias/place and indirect target | `primitive_integer_float_byte_boolean_and_cast_cells_execute`, `object_initialization_dispatch_and_checked_views_execute_through_the_verified_path`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries` |
+| Shared owners, recursive cleanup and container lifecycle | `shared_owners_execute_allocation_transfer_fields_casts_and_finalization`, `aggregate_and_class_optional_lifecycle_executes_through_the_verified_path`, `optional_boxes_publish_access_and_finalize_through_the_verified_path`, `nontrivial_array_element_lifecycle_executes_through_generated_helpers`, `indexed_arrays_and_array_aliases_execute_through_the_verified_path`, `copied_array_slices_execute_through_the_verified_path`, `primitive_slice_assignment_executes_through_the_verified_path` |
+| String, I/O, runtime and C boundaries | `literal_strings_and_standard_io_execute_through_the_verified_path`, `standard_io_open_read_and_close_errors_execute_through_the_verified_path`, `source_panic_string_bytes_execute_with_both_trace_policies`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries` |
+| Success, reported failure, attribution and pressure | `adversarial_numeric_boundaries_execute_through_the_verified_path`, `checked_division_failure_preserves_runtime_reporting_and_trace_policy`, `failed_checked_cast_reports_at_its_source_operation`, `absent_optional_unwrap_preserves_runtime_reporting_and_trace_policy`, `guarded_optional_mutation_reports_the_language_failure`, `shared_finalizer_failure_preserves_source_attribution_and_stops_before_free`, `destructor_failure_keeps_the_user_body_and_cleanup_site_in_the_trace`, `static_lifecycle_failures_keep_source_frames_and_exclude_coordinators`, the two policy matrices and the C pressure witness |
+| Hard-defect negatives and deterministic publication | `independent_native_verification_rejects_corrupt_fields_effects_flags_and_reference_caches`, `invalid_encodings_recipes_dependencies_and_provenance_reject`, `selected_closure_rejects_a_locally_valid_body_pruned_by_its_lower_parent`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
+
+Structural observations are the checked lowered/selected/placement/frame/physical
+inventories asserted by these fixtures, including nonzero outgoing areas,
+aggregate destination/receiver roles, trace TLS presence by policy, recursive
+helper closure and exact data/callable reconciliation. The retained
+[foundation measurement record](../development/LOW_LEVEL_COMPILER_MEASUREMENTS.md)
+still supplies the 21-configuration compile/RSS/text/frame/native baseline and
+its eleven inconclusive short compile timings. The private path is deliberately
+not selectable through production `skac`, so a compatible candidate timing
+capture before LA05 integration would measure the legacy path. LA05 must collect
+the paired candidate evidence after it introduces the reviewed production
+selection boundary; this checkpoint grants no cost clearance.
 
 Analyses borrow exact immutable products or belong to phase-local sessions;
 mutation invalidates them. IDs alone do not certify freshness. Shared immutable
@@ -366,11 +406,11 @@ to introduce global caches or a general pass manager.
 
 | Frozen walkthrough | Current evidence and readiness disposition | Downstream acceptance obligation |
 | --- | --- | --- |
-| Live arithmetic input with x86 tie versus AArch64 three-address form | E01 selection plus E19 runtime-loaded inputs reused after arithmetic result and a call; G01 closed | LA03 selected tie test plus independent placement corruption/value-flow test; synthetic three-address/resource view test, no AArch64 execution claim |
-| Loop, join and checked signed division | E03 boundary/property/failure coverage plus E19 signed division/remainder through both joins and loop epochs with original inputs live; G02 closed | LA02 dominance/block-parameter/edge negatives; LA03 all selection-created correction blocks visible and transfers checked |
-| Object result, receiver triple, integer/float pressure and indirect target | E05 hidden destination/receiver plus E19 direct/interface object results with seven integer/nine floating arguments and later argument calls; G03 closed | LM05 checked role assembly, pressure selection and realization; LM06 adds virtual/interface target selection; AArch64 `x8` witness remains proposed private mapping |
-| Original allocation across finalizer and free | E07/E08 lifecycle integration plus E20 finalizer-before-free, mutable-owner replacement, all caller-saved integer/SIMD registers clobbered, original header freed once; G04 closed | LA04 lowered header value survives call, metadata/helper checks remain hard defects, source destructor gets its own trace frame |
-| Width overlap, preserved resources and platform reservations | E02/E05 exercise current scalar x86 ABI; no machine resource model exists yet | LA03 synthetic overlap/partial-preservation/link-register/resource tests and real x86 assembler/C ABI probes; full AArch64 remains separate |
+| Live arithmetic input with x86 tie versus AArch64 three-address form | E01/E19 plus selected tie, independent placement corruption/value-flow and synthetic three-address/resource tests; G01 closed | Delivered by LA03; no AArch64 execution claim |
+| Loop, join and checked signed division | E03/E19 plus dominance, correction-CFG, loop epoch and checked-transfer negatives; G02 closed | Delivered by LA02/LA03 and retained in E22 |
+| Object result, receiver triple, integer/float pressure and indirect target | E05/E19 plus checked role assembly, dynamic dispatch selection and native realization; G03 closed | Delivered by LM05–LM06 and E22; AArch64 `x8` remains a synthetic contract witness |
+| Original allocation across finalizer and free | E07/E08/E20 plus owner-helper and failing-destructor private-pilot tests; G04 closed | Delivered by LM08 with metadata/helper hard defects and source destructor attribution retained |
+| Width overlap, preserved resources and platform reservations | E02/E05 plus shared/native overlap, partial-preservation, link-register and real x86 assembler/C ABI probes | Delivered by LA03; full AArch64 remains separate |
 
 Phase preparation closed G01–G05 as current-behavior readiness obligations. No wrong-code
 defect was found. Fixed homes still hide the future destructive-tie hazard;
@@ -583,9 +623,9 @@ is accepted, frozen and implemented. Its [archived roadmap](../archive/LOW_LEVEL
 records cumulative review and artifact-free validation. The
 [common readiness record](#common-model-readiness) and
 [retained artifacts](#retained-model-artifacts-and-removal-owners) remain the
-handoff through migration and adoption. The architecture program and cleanup
-audit's A22 remain in progress: the completed private scalar pilot does not
-deliver full-language production lowering, adoption or allocation.
+handoff through adoption. The architecture program and cleanup audit's A22
+remain in progress: full private parity does not deliver production adoption or
+allocation.
 The [accepted, frozen native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 define and implement the private pilot. The
@@ -597,7 +637,7 @@ reconciles exact executable receipts against its borrowed finalized lower parent
 Owner regressions cover body release before closure, discarded discovery authority,
 stale replacement, missing thunks and bound-parent edits. Native orchestration,
 checked placement/frame/physical publication and exact final closure are complete
-for the admitted scalar surface.
+for the full private language surface.
 
 The pilot hardening matrix crosses default/minimal MIR, enabled/omitted tracing
 and complete/reachable artifacts. Focused native cases cover all unordered NaN
@@ -682,20 +722,18 @@ publication tests cover heterogeneous incoming slot zero and strict negatives.
 
 ## Private planning and lowering readiness
 
-Whole-program admission now checks the physically retained final-MIR domain,
-including uncalled bodies, signatures, scalar/function-pointer and aggregate
-payloads, storage and places. Artifact retention requests cannot hide
-unsupported bodies. Complete
-emission also checks unsupported generated family roots; reachable emission uses
+Whole-program checked planning now projects the physically retained final-MIR
+domain, including uncalled bodies, signatures, every payload, storage and place.
+Complete emission declares every generated family; reachable emission uses
 certified runtime obligations. Sparse declarations remain absent rather than
-being resurrected. Direct receiver-bearing and static methods are eligible when
-their owning class requires no retained unsupported lifecycle family.
+being resurrected. There is no feature allowlist or structured unsupported
+program result.
 
 `backend::planning` freezes checked semantic layout identities, canonical higher-order
 code signatures, source/entry declarations, C/runtime declarations, failure data
 and enabled-only owned trace metadata. It borrows the inspected MIR snapshot only
 for `backend::lowering`; later phases consume immutable views. Public emission remains
-legacy. This is admission/projection evidence, not executable native equivalence.
+legacy. This is planning/projection evidence; E22 owns executable native parity.
 The semantic catalog now includes exact/complete class and shared-allocation
 layouts, base/field offsets, destruction order, recursive optional/optional-box
 and array layouts, element lifecycle plans, object-view component shapes and
@@ -729,7 +767,7 @@ with checked relocations. A streaming consumer receives each verified body;
 complete shared lower closure retains exact receipts, not all callable drafts.
 Consumer failure cannot publish a complete inventory witness.
 
-LM05 adds checked complex-place formation from semantic base, field, optional,
+LM05 added checked complex-place formation from semantic base, field, optional,
 array, static and shared-allocation facts. Object origins remain explicit
 static/complete/metadata values, including forwarded alias and shared-header
 forms. Direct calls assemble hidden destinations, aggregate values, aliases,
@@ -737,8 +775,8 @@ shared owners and receiver triples from logical roles before selection. Existing
 mixed-bank pressure, verifier-corruption and physical-realization witnesses
 cover that common boundary; a source-derived regression covers projected fields,
 aggregate parameters, aliases and forwarded direct receivers. Trivial class
-cleanup is a semantic no-op; every nontrivial lifecycle body still rejects
-before admission.
+cleanup is a semantic no-op; LM07–LM14 later completed every nontrivial
+lifecycle body.
 
 LM06 adds checked direct, virtual and interface dispatch, runtime membership,
 success-only checked views and initializer calls into final destinations.
@@ -818,7 +856,7 @@ call a legacy layout, dispatch, retention, trace or static planner.
 | Scalar operations, guarded numeric cells, primitive casts and ordinary CFG | Typed signatures/layouts, failure data and guard associations | Delivered pilot retained as the common base; family-specific terminators complete with LM05–LM15 |
 | Complex places, object origins, aggregate results, aliases and receiver components | Exact/complete layouts, field/base offsets, object-view components and role-based signatures | Delivered by LM05, LM06 checked-view binding and LM14 array-alias binding |
 | Direct/virtual/interface dispatch, checked views, object casts and object initialization | Membership, conformance, method slots, dispatch targets and descriptor recipes | Delivered by LM06; owner-producing shared casts remain with LM08 |
-| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07–LM08, LM11 and LM13 for all currently admitted scalar, class, optional, shared and array steps |
+| Copy, cleanup, destruction and complete-class finalizers | Selected copy operations, ordered destruction steps and generated declarations/dependencies | Delivered by LM07–LM08, LM11 and LM13 for all scalar, class, optional, shared and array steps |
 | Shared allocation, transfer, reference counts and retain/release helpers | Shared header/allocation layouts, runtime services and recursive helper identities | Delivered by LM08 for class owners; wrapper/container owners reuse this core in LM10–LM14 |
 | Primitive and shared-owner optional operations | Optional layout/storage facts and shared lifecycle operations | Delivered by LM10; aggregate/class/boxed guards remain LM11 |
 | Aggregate/class optionals, optional views and optional boxes | Recursive optional layouts, object views, box layers/allocation and finalizer dependencies | Delivered by LM11; inline-array payload lifecycle delivered by LM13 |
@@ -841,8 +879,7 @@ decision remains.
 This qualifies shared program closure, not native execution or trace recipes.
 `ReportFailure` preserves the mandatory reporter/defensive-trap contract; the
 native numeric selector now declares its canonical atomic call/UD2 recipe. Trace TLS zero
-storage remains a target artifact obligation. Lifecycle and aggregate source
-migration remain unsupported. Ordinary scalar native graphs now publish through
+storage remains a target artifact obligation. Ordinary native graphs publish through
 joint shared/independent native verification, preserving lower maps and recipe
 origins, declared scratch/flag bundles and distinct branch transfer forwarders.
 Native tests cover unordered comparisons, malformed fields/effects/resources,
@@ -858,12 +895,12 @@ payloads and numeric boundaries against independent references, including loops
 and preceding correction joins. Reporter signature, ABI, effects and exact
 message/length are checked independently. A call's trace-state barrier does not
 request caller TLS; explicit trace accesses still require enabled policy and
-TLS authority. Native call/trace selection now covers the complete admitted pilot,
+TLS authority. Native call/trace selection now covers the complete private pilot,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
 and frame checks use frozen parent facts. Typed physical-program closure streams
 checked fragments and reconciles exact finalized parents before assembly
-publication. The private whole-program pilot now drives admitted source through
+publication. The private whole-program pilot drives planned source through
 projection, frozen discovery, lowering, selection, baseline placement, symbolic
 frames, physical verification and exact artifact closure without fallback. Native
 execution covers the explicit trace/MIR/artifact-policy matrix, primitive and
@@ -902,6 +939,6 @@ drafts into immutable exact-parent publications after encoding, finite recipe,
 reference and CFG stack/preservation checks. Requested-only inspection and
 cloneable body-free receipts are implemented. Typed program closure retains those
 receipts and dependencies while storing callable text privately, then publishes
-assembly only after complete selected, data and fragment reconciliation. The
-private admitted scalar pilot supplies native execution parity for this surface;
-full-language parity and production adoption remain separate.
+assembly only after complete selected, data and fragment reconciliation. E22
+supplies full-language private execution parity; production adoption remains
+separate in LA05.

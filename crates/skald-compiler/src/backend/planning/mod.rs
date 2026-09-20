@@ -1,9 +1,8 @@
-//! Whole-program admission and immutable final-MIR fact projection.
+//! Whole-program checked planning and immutable final-MIR fact projection.
 //!
-//! Final-MIR queries stop at this boundary. Lowering consumes the admitted
+//! Final-MIR queries stop at this boundary. Lowering consumes the planned
 //! program and its checked plan without consulting frontend state.
 
-mod admission;
 mod facts;
 mod layouts;
 mod projection;

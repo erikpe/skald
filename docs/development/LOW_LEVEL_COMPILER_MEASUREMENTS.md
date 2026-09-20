@@ -272,6 +272,29 @@ noise rule in both pairs, including the shortest workloads; no native-duration
 repair was needed. This readiness permits downstream architecture design and
 implementation, while cost clearance remains an adoption obligation.
 
+### Full private-parity handoff
+
+The complete private low-level pipeline now has structural and native parity
+evidence across both MIR schedules, both trace policies, both artifact policies,
+all callable/value families, success, reported failure, hard-defect negatives,
+recursive cleanup and ABI pressure. The exact witness matrix is maintained in
+the [migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#full-private-parity-checkpoint).
+Its requested checkpoints expose lowered, selected, placement, frame and
+physical structure; tests assert aggregate destination/receiver roles, nonzero
+outgoing areas, trace-policy resources, recursive helper closure and exact
+callable/data reconciliation.
+
+The private path remains intentionally unavailable through production `skac`.
+Running the paired timing collector against the current compiler would therefore
+measure legacy emission and cannot qualify the candidate architecture. The
+retained 21-configuration baseline and comparator were reverified at the private
+parity checkpoint with `verify_low_level_baseline.py` and
+`make measurement-support-test`. Its eleven short compile timing classifications
+remain inconclusive without a cost exception. LA05 owns the reviewed production
+selection boundary and the first compatible paired candidate capture; it must
+recapture the preserved baseline when required by the harness fingerprint rules
+below. Private-parity completion grants no cost clearance.
+
 The following compact summary uses the **first capture's baseline role only**;
 it does not pool pairs or compiler roles. Full raw ranges/MADs and the second
 capture are authoritative in the retained reports; comparison remains per

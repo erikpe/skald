@@ -7,9 +7,9 @@ Complete lowered-program inventory publication, plan-bound target catalogs,
 selected graphs with exact parent reconciliation and consuming edits are implemented. Verified
 products support immutable visitors and private deterministic text inspection.
 The [x86 native contracts](X86_NATIVE_CONTRACTS.md) implement resource facts and
-component classification. Private whole-program admission and final-MIR fact
-projection, ordinary scalar/CFG lowering and guarded numeric lowering are
-implemented, including lower program closure, calls/tracing and generated entry.
+component classification. Private whole-program checked planning and final-MIR
+fact projection are implemented for the complete verified language surface,
+including lower program closure, generated families, calls, tracing and entry.
 Private native scalar/numeric/call/trace selection and joint checking are
 implemented with signature-local ABI slot shapes. Shared unchecked placement
 drafts, structural validation and independent
@@ -20,19 +20,20 @@ implemented. [Checked frame planning](FRAME_PLANNING.md) is implemented over
 exact checked placement. Private typed [physical realization](PHYSICAL_REALIZATION.md)
 and independent native checking are implemented, with immutable physical
 publication and requested-only inspection. A private whole-program x86 pilot
-streams admitted bodies through both construction passes, every mandatory check,
+streams planned bodies through both construction passes, every mandatory check,
 frame planning and exact final program closure, then returns immutable assembly.
 The public/default backend remains unchanged.
 
 ## Shared final-MIR lowering
 
-Private `backend::planning` owns whole-program admission and immutable fact
-projection. `backend::lowering` constructs ordinary scalar bodies with the
+Private `backend::planning` owns whole-program checked planning and immutable
+fact projection. `backend::lowering` constructs source and generated bodies with the
 standard lowered builder and publishes them through full callable verification.
 Its streaming worklist registers exact body receipts and closes the complete
 lowered program and frozen data inventory. Calls, enabled/omitted tracing and
 generated entry use checked signatures and attribution. Consumer failure prevents
-publication, and unsupported programs reject during whole-program admission.
+publication. Malformed facts and target constraints fail in their owning checked
+phase; there is no feature-family admission allowlist.
 
 Every retained MIR block is preserved, including unreachable blocks and repeated
 successor occurrences. MIR computed values are block-local, so the adapter needs
@@ -46,7 +47,7 @@ no scalar access or lifetime operation.
 
 Source value and storage origins survive reservation. Primitive comparison
 predicates retain operand types; floating constants retain raw bits and callable
-addresses retain canonical code signatures. Lowering queries only admitted MIR
+addresses retain canonical code signatures. Lowering queries only planned MIR
 and frozen plan facts, without selecting registers, frame offsets or instructions.
 
 ### Guarded numeric lowering
@@ -99,25 +100,15 @@ fixtures remain available for independent model tests. Present source bodies may
 An absent source declaration remains inspectable but cannot acquire that binding.
 Target thunks cannot enter the shared declaration catalog.
 
-The private planner checks every physically retained body and its storage,
-places, signatures, calls and terminators against the current staged admission
-allowlist.
-Requesting reachable artifact emission does not remove unsupported bodies.
-Direct receiver-bearing bodies, aliases, complex places, aggregate parameters,
-initializers, runtime type tests, checked object views, virtual/interface
-dispatch, scalar/class/shared-field user and synthesized copy, class cleanup and
-shared class-owner lifecycle, primitive, nested, inline-class and nullable
-shared-owner optionals, optional payload guards, and exact or polymorphic
-optional-box owners are eligible. Inline-array optional payloads, container
-lifecycle, I/O, string initialization and statics still reject explicitly.
-Complete artifact emission supports class metadata, copy, finalization and
-shared-owner families, including recursively generated class and optional-box
-finalizers. It still rejects declared array families whose generated lifecycle
-roots are not yet implemented. Reachable emission uses
-certified runtime obligations; unused declarations do not acquire executable
-authority.
+The private planner projects every physically retained body and every required
+source, generated, runtime and data declaration. Complete emission retains the
+complete declared artifact domain; reachable emission uses certified runtime
+obligations and typed dependency closure. Sparse declarations remain absent and
+unused declarations never acquire executable authority. Exhaustive MIR matches
+in lowering and closed checked schemas make newly added operations a compile-time
+implementation obligation rather than a rollout rejection.
 
-The admitted product borrows the exact inspected MIR snapshot for shared lowering
+The planned product borrows the exact inspected MIR snapshot for shared lowering
 and owns immutable checked facts. It preserves absent source declarations,
 canonical higher-order function signature IDs, distinct semantic layout IDs,
 external and runtime service declarations, entry and failure-message data.
@@ -129,7 +120,7 @@ offsets, incomplete object components, incompatible membership, malformed
 method slots and dispatch targets without executable authority.
 Unused aggregate/alias declarations remain inspectable; they do not grant
 lowering support. Empty lifecycle coordinators are absent. Selection and later
-phases use plan views rather than the admitted product's MIR access.
+phases use plan views rather than the planned product's MIR access.
 
 Existing checked x86 layout, dispatch and trace services have narrow projection
 adapters. Layout and dispatch computation occurs once during projection; legacy
@@ -139,10 +130,10 @@ source-span mappings in canonical order; target symbols and source databases do
 not escape the adapter. `TraceBytes` keys distinguish byte backing from activation
 records. Omitted tracing returns empty metadata before any source lookup and
 creates no trace/TLS declarations. Later artifact closure retains the used subset.
-The public backend remains on legacy emission; admission creates no executable
+The public backend remains on legacy emission; planning creates no executable
 lowered, selected or physical body and never falls back after a private failure.
 
-The private shared adapter can close the complete admitted lower inventory. It
+The private shared adapter closes the complete planned lower inventory. It
 forms local, caller-provided, static and shared-backed addresses from checked
 layout facts, preserving symbolic object provenance where it is available.
 Aggregate results and parameters, aliases and direct receivers bind to logical

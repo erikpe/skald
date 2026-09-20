@@ -1,10 +1,10 @@
 //! Final-MIR queries stop here. Downstream facts carry no frontend authority.
 
-use super::{admission, AdmissionError, AdmittedProgram};
 use super::{
     layouts::collect_types,
     signatures::{declaration_inventory, intern_source_signature, signature, unit_signature},
 };
+use super::{AdmissionError, AdmittedProgram};
 use crate::backend::{plan::*, x86_64_sysv, BackendInput};
 use crate::mir::*;
 use std::collections::BTreeMap;
@@ -12,7 +12,6 @@ use std::collections::BTreeMap;
 pub(in crate::backend) fn admit(
     input: BackendInput<'_>,
 ) -> Result<AdmittedProgram<'_>, AdmissionError> {
-    admission::check(input)?;
     let program = input.program();
     let mut facts = PlanFacts {
         profile: TargetProfile {

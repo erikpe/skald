@@ -1,8 +1,8 @@
 # Complete Low-Level Lowering Migration Discoveries
 
 Items here are intentionally outside the active PR-sized task that exposed
-them. They should be assessed after the roadmap unless a later task already
-owns the required machinery.
+them. LM18 confirmed both on the complete private pipeline; cumulative review
+should bound and assign them without weakening semantic expansion.
 
 ## D01 — Branch-heavy recursive optionals amplify baseline placement cost
 
@@ -14,8 +14,9 @@ noticeably slow. Keep lifecycle expansion structurally explicit; after LM14 has
 completed recursive container CFGs, measure representative combined graphs and
 consider a linear-time placement/worklist improvement or safe CFG compaction.
 Do not flatten optional state or add an opaque lifecycle opcode to address this.
-Priority is medium; the placement pipeline owns the follow-up, with LM14 as the
-earliest useful measurement boundary.
+LM18's complete private pilot suite confirms that recursive lifecycle cases are
+the dominant long-running tests. Priority is medium; the placement pipeline owns
+the follow-up before or during production adoption.
 
 ## D02 — Live array element loads amplify baseline placement cost
 
@@ -25,15 +26,7 @@ length. Returning or branching on a loaded element made the private physical
 pipeline exceed 120 seconds for a three-element primitive array under the
 allocation-independent baseline placer. This is a compile-time placement cost,
 not a reason to weaken checked array addressing or add a target opcode. Measure
-it together with D01 after LM14 has completed array aliases and slices; then
-improve the placement worklist or compact equivalent CFG where the evidence
-points. Priority is medium and the placement pipeline owns the follow-up.
-
-## D03 — Completed place admission leaves a no-op staging seam
-
-LM14 removed the last place form rejected by the low-level admission pass:
-array aliases. The shared `place` admission helper is therefore now a no-op,
-although earlier instruction families still call it. Removing that seam touches
-the full admission matrix and is better handled during the roadmap's final
-cumulative cleanup, once LM15 and LM16 have removed the remaining staged
-rejections. Priority is low; the admission boundary owns the follow-up.
+it together with D01; then improve the placement worklist or compact equivalent
+CFG where the evidence points. LM18's full private suite again found the array
+lifecycle cases to dominate runtime. Priority is medium and the placement
+pipeline owns the follow-up before or during production adoption.

@@ -6,17 +6,9 @@ use crate::backend::{
 };
 use crate::{identity::FunctionTypeId, mir::MirType};
 
-#[derive(Debug, Eq, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) struct UnsupportedProgram {
-    pub callable: Option<crate::identity::CallableId>,
-    pub reason: String,
-}
-
 #[derive(Debug)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(in crate::backend) enum AdmissionError {
-    Unsupported(UnsupportedProgram),
     Backend(BackendError),
     Plan(PlanError),
 }
@@ -78,11 +70,6 @@ pub(in crate::backend) struct TraceFacts {
 impl std::fmt::Display for AdmissionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Unsupported(reason) => write!(
-                f,
-                "unsupported low-level input in {:?}: {}",
-                reason.callable, reason.reason
-            ),
             Self::Backend(error) => error.fmt(f),
             Self::Plan(error) => write!(f, "low-level planning invariant: {error:?}"),
         }

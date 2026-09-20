@@ -1,6 +1,6 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM16 are complete and LM17 is next.
+Status: active; LM01–LM18 are complete and LM19 is next.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
@@ -13,7 +13,7 @@ Exhaustive handoff:
 This roadmap expands the checked private native pilot into a complete
 full-language x86-64 path. It preserves the production legacy backend as the
 default and parity oracle until the separate architecture-adoption workstream.
-Every admitted retained program uses one checked low-level pipeline without
+Every retained program uses one checked low-level pipeline without
 per-callable or per-operation fallback.
 
 ## Scope and invariants
@@ -33,7 +33,7 @@ per-callable or per-operation fallback.
   semantic, ABI, diagnostic and deterministic parity.
 - LA04 ends with complete private parity. Production default adoption, public
   driver observations, legacy deletion and cost acceptance remain LA05.
-- Tests use an explicit private new-path entry. Failure after admission never
+- Tests use an explicit private new-path entry. Failure after planning never
   retries through the legacy backend.
 
 ## Progress
@@ -55,7 +55,7 @@ per-callable or per-operation fallback.
 - [x] LM15 — Lower strings, literal data and standard I/O
 - [x] LM16 — Lower static lifecycle and complete entry orchestration
 - [x] LM17 — Complete trace, data and artifact closure parity
-- [ ] LM18 — Reconcile exhaustive private parity and measurements
+- [x] LM18 — Reconcile exhaustive private parity and measurements
 - [ ] LM19 — Cumulative review, cleanup and LA05 handoff
 
 ## PR-sized implementation sequence
@@ -624,14 +624,14 @@ cover the observation boundary without adding a public adapter.
 **Purpose:** prove full-language completeness and prepare a trustworthy LA05
 adoption decision without claiming it prematurely.
 
-- [ ] Remove the last feature allowlist/unsupported admission path; retained
+- [x] Remove the last feature allowlist/unsupported admission path; retained
   supported programs plan or return ordinary checked backend errors.
-- [ ] Reconcile every MIR instruction, rvalue, terminator, array operation,
+- [x] Reconcile every MIR instruction, rvalue, terminator, array operation,
   helper, runtime entity, data, trace and publication row in the coverage record
   with named durable evidence.
-- [ ] Run the full parity matrix across MIR schedule, trace policy, artifact
+- [x] Run the full parity matrix across MIR schedule, trace policy, artifact
   policy, callable/ABI family and success/failure/pressure behavior.
-- [ ] Capture structural and cost observations with the maintained protocol,
+- [x] Capture structural and cost observations with the maintained protocol,
   retaining the eleven inconclusive timing classifications for LA05.
 
 **Tests:** complete focused parity suites, `make check`, full determinism and
@@ -641,6 +641,18 @@ evidence verification.
 **Exit criteria:** full private parity checkpoint passes, no supported retained
 program is rejected as unsupported, and LA05 receives complete coverage and
 measurement evidence without cost clearance claims.
+
+Completed on 2026-09-20. The rollout-only `planning::admission` classifier and
+its structured unsupported-program result are removed; malformed inputs now fail
+in their checked owning phase. E22 in the coverage record names the complete
+MIR/trace/artifact/callable/value/behavior matrix and its durable witnesses. The
+full private pilot suite passed all 34 native tests. Retained baseline evidence
+and all 44 measurement-support tests verify; the eleven short compile timings
+remain inconclusive and transfer unchanged to LA05. `make check-long` passed,
+including 3,516 compiler unit tests, runtime tests, 650 full-determinism and 650
+release golden leaves, Rust 1.82, the 10,000-case robustness suite and maintained
+runtime benchmarks. Production emission remains legacy, so LA05 owns the first
+valid paired candidate capture after introducing its reviewed selection boundary.
 
 ### LM19 — Cumulative review, cleanup and LA05 handoff
 
@@ -695,14 +707,14 @@ continuing purpose and explicit removal owner.
 | Artifact | Introduced | Removal owner | Current disposition |
 | --- | --- | --- | --- |
 | Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Removed in LM01: admission/fact projection are owned by `backend::planning`, lowering by `backend::lowering`, and target fact adapters use semantic names |
-| `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private admitted product, structured errors and trace facts; narrow as feature consumers land |
+| `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private planned product, checked projection errors and trace facts while production remains legacy |
 | `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
 | `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 and resource consumers added LM03 | Residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
 | `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, `dbada8c6`; audited LM04 | Executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
 | Eager complete-mode `RawClassCopy` declarations for every class | LM03, `dbada8c6` | LM09 | Removed in LM09: raw-address wrappers are array-element machinery and will acquire roots from their actual array-helper consumers |
 | Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
 | `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
-| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Narrowed through LM16: both artifact policies admit the complete class/shared, optional, array, string, I/O and static-lifecycle families; LM17–LM18 own the remaining trace/artifact closure and exhaustive removal |
+| Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Removed in LM18: checked planning projects the complete retained program and errors are owned by the phase that detects them |
 | Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 
