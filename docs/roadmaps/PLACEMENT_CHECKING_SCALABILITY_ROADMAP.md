@@ -1,9 +1,9 @@
 # Placement Checking Scalability Roadmap
 
-Status: planned; PS01 is next.
+Status: active; PS01 is complete and PS02 is next.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
-Implementation baseline: record the committed roadmap revision immediately
-before PS01 changes code or measurement support.
+Implementation baseline: `9eafca80`, the committed roadmap revision immediately
+before PS01 changed code or measurement support.
 Accepted design:
 [Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md).
 Parent program:
@@ -64,7 +64,7 @@ accepting a timing-dependent result.
 
 ## Progress
 
-- [ ] PS01 — Establish placement phase measurements and pass the diagnosis checkpoint
+- [x] PS01 — Establish placement phase measurements and pass the diagnosis checkpoint
 - [ ] PS02 — Establish fixed-point equivalence evidence and migration scaffolding
 - [ ] PS03 — Replace tree-set lattice states with compact finite bitsets
 - [ ] PS04 — Precompute measured immutable placement relations
@@ -79,24 +79,24 @@ accepting a timing-dependent result.
 **Purpose:** turn the observed suite regression into reproducible phase evidence
 before optimizing the checker.
 
-- [ ] Record the actual implementation baseline from current history before the
+- [x] Record the actual implementation baseline from current history before the
   first code or measurement-support change.
-- [ ] Add a narrow owner-private or test-only observation path that reports
+- [x] Add a narrow owner-private or test-only observation path that reports
   planning, both lowering passes, selection, placement production, placement
   checking, frame planning, realization/checking, publication and native
   execution separately.
-- [ ] Report deterministic placement dimensions and work: reachable blocks,
+- [x] Report deterministic placement dimensions and work: reachable blocks,
   edge occurrences, locations by kind, tokens, state bits, selected events,
   transfers, convergence visits, fact removals and peak pending work.
-- [ ] Add a reproducible measurement command following existing repository
+- [x] Add a reproducible measurement command following existing repository
   conventions. Record repository/profile/host identity, warm-up and repeated
   samples; write raw JSON below an ignored `build/measurements/placement-checking/`
   directory.
-- [ ] Create a maintained development note containing commands, witness IDs,
+- [x] Create a maintained development note containing commands, witness IDs,
   baseline medians, peak RSS observations and interpretation limits.
-- [ ] Measure all six witnesses and the empty-array/small-scalar controls. Record
+- [x] Measure all six witnesses and the empty-array/small-scalar controls. Record
   whether placement checking dominates D01 and D02 independently.
-- [ ] Update the artifact ledger with every observation seam, counter and report
+- [x] Update the artifact ledger with every observation seam, counter and report
   helper introduced here.
 
 **Tests:** measurement-support unit tests; focused pilot observation tests;
@@ -107,6 +107,14 @@ results; `make static-check`.
 report, placement-checking time is separated from placement production, and the
 diagnosis checkpoint explicitly says go or no-go. A no-go blocks PS02 and
 requires a design amendment.
+
+**Completed:** the two-repetition baseline is recorded in
+[Placement Checking Performance](../development/PLACEMENT_CHECKING_PERFORMANCE.md).
+Placement checking consumed 99.52% of native-pilot time for the D01 witness and
+99.87% to 99.97% for all six D02 witnesses, while draft production remained in
+the 5.18--28.28 ms range. Structural observations matched exactly between
+repetitions. The diagnosis checkpoint is **go for D01 and D02**; PS02 may
+proceed without amending the accepted design.
 
 ### PS02 — Establish fixed-point equivalence evidence and migration scaffolding
 
@@ -293,8 +301,8 @@ closed, and LA05 receives one maintained scalable baseline checker.
 
 | Artifact | Introduced | Intended disposition | Retention criterion |
 | --- | --- | --- | --- |
-| Phase timing and placement structural-metric observation seam | PS01 | Review and narrow/remove in PS07 | Retain only if the owner-private interface is deterministic, has no normal-compilation cost and is used by LA05 measurement |
-| Placement-checking measurement command and development note | PS01 | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
+| `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, commit pending | Review and narrow/remove in PS07 | Retain only if the test-only interface remains deterministic, has no ordinary-compilation output and is used by LA05 measurement |
+| `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, commit pending | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
 | Canonical fixed-point digest/comparison view | PS02 | Remove or keep test-only in PS07 | Retain only if it materially protects solver equivalence without exposing authority or adding material suite cost |
 | Extended deterministic-round oracle | PS02 | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
 | Generated solver-equivalence cases | PS02 | Prefer permanent bounded tests | Fixed seeds, stable size bound, independent semantics and low ordinary-suite cost |

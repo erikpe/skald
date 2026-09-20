@@ -12,6 +12,10 @@ use crate::backend::{
     },
 };
 
+use std::time::Duration;
+#[cfg(test)]
+use std::time::Instant;
+
 struct NativeTarget {
     resources: NativeResources,
     profile: TargetProfile,
@@ -35,6 +39,42 @@ pub(in crate::backend) fn place_native_baseline<'s, 'p>(
 ) -> Result<CheckedPlacement<'s, 'p, Instruction>, CheckFailure> {
     let profile = selected.draft().context().catalog().plan().profile();
     placement::place_baseline(selected, &NativeTarget::new(profile)?)
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(not(test), allow(dead_code))]
+pub(in crate::backend) struct NativePlacementProfile {
+    pub production: Duration,
+    pub checking: Duration,
+    pub check: placement::PlacementCheckMetrics,
+}
+
+#[cfg(test)]
+pub(in crate::backend) fn place_native_baseline_profiled<'s, 'p>(
+    selected: &'s VerifiedSelectedCallable<'p, Instruction>,
+) -> Result<
+    (
+        CheckedPlacement<'s, 'p, Instruction>,
+        NativePlacementProfile,
+    ),
+    CheckFailure,
+> {
+    let profile = selected.draft().context().catalog().plan().profile();
+    let target = NativeTarget::new(profile)?;
+    let started = Instant::now();
+    let draft = placement::produce_baseline(selected, &target)?;
+    let production = started.elapsed();
+    let started = Instant::now();
+    let (placement, check) = placement::check_placement_profiled(draft, &target)?;
+    let checking = started.elapsed();
+    Ok((
+        placement,
+        NativePlacementProfile {
+            production,
+            checking,
+            check,
+        },
+    ))
 }
 impl NativeTarget {
     fn new(profile: TargetProfile) -> Result<Self, CheckFailure> {

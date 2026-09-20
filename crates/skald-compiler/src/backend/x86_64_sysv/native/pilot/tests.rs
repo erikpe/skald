@@ -2,7 +2,8 @@ use crate::{
     backend::RuntimeTracePolicy,
     test_support::{
         lower_source_to_final_mir_with_sources, lower_source_to_minimal_final_mir_with_sources,
-        run_native_assembly_output, run_native_assembly_with_c_probe,
+        run_native_assembly_output, run_native_assembly_output_profiled,
+        run_native_assembly_with_c_probe, run_native_assembly_with_c_probe_profiled,
         run_native_assembly_with_runtime_trace_probe, FinalMirWithSources,
     },
 };
@@ -33,7 +34,13 @@ fn compile(
     if reachable {
         input = input.with_reachable_artifacts_only();
     }
-    super::super::compile_native_pilot(input)
+    if measurement_requested() {
+        let (assembly, profile) = super::pipeline::compile_native_pilot_profiled(input)?;
+        eprintln!("{}", profile.render());
+        Ok(assembly)
+    } else {
+        super::super::compile_native_pilot(input)
+    }
 }
 
 fn inspect(
@@ -67,6 +74,11 @@ fn inspect_with_policy(
 fn assert_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32) {
     let output = match trace {
         RuntimeTracePolicy::Enabled => run_native_assembly_with_runtime_trace_probe(assembly),
+        RuntimeTracePolicy::Omitted if measurement_requested() => {
+            let (output, profile) = run_native_assembly_output_profiled(assembly);
+            emit_native_profile(&profile);
+            output
+        }
         RuntimeTracePolicy::Omitted => run_native_assembly_output(assembly),
     };
     assert_eq!(output.status.code(), Some(expected), "{output:?}");
@@ -76,10 +88,27 @@ fn assert_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32) {
 fn assert_runtime_exit(assembly: &str, trace: RuntimeTracePolicy, expected: i32) {
     let output = match trace {
         RuntimeTracePolicy::Enabled => run_native_assembly_with_runtime_trace_probe(assembly),
+        RuntimeTracePolicy::Omitted if measurement_requested() => {
+            let (output, profile) = run_native_assembly_with_c_probe_profiled(assembly, "");
+            emit_native_profile(&profile);
+            output
+        }
         RuntimeTracePolicy::Omitted => run_native_assembly_with_c_probe(assembly, ""),
     };
     assert_eq!(output.status.code(), Some(expected), "{output:?}");
     assert!(output.stderr.is_empty(), "{output:?}");
+}
+
+fn measurement_requested() -> bool {
+    std::env::var_os("SKALD_PLACEMENT_MEASUREMENT").is_some()
+}
+
+fn emit_native_profile(profile: &crate::test_support::NativeExecutionProfile) {
+    eprintln!(
+        "SKALD_NATIVE_PROFILE {{\"format\":1,\"link_ns\":{},\"execution_ns\":{}}}",
+        profile.link.as_nanos(),
+        profile.execution.as_nanos()
+    );
 }
 
 fn aggregate_lifecycle_checkpoint_source() -> &'static str {
@@ -284,6 +313,26 @@ fn empty_inline_array_uses_its_null_representation_without_header_access() {
     );
     let assembly = compile(&fixture, RuntimeTracePolicy::Omitted, true).unwrap();
     assert_runtime_exit(&assembly, RuntimeTracePolicy::Omitted, 0);
+}
+
+#[test]
+fn placement_measurement_is_out_of_band() {
+    let fixture = fixture(MirMode::Default, "fn main()->i64{return 7;}");
+    let input = fixture
+        .backend_input(RuntimeTracePolicy::Omitted)
+        .with_reachable_artifacts_only();
+    let expected = super::super::compile_native_pilot(input).unwrap();
+    let input = fixture
+        .backend_input(RuntimeTracePolicy::Omitted)
+        .with_reachable_artifacts_only();
+    let (measured, profile) = super::pipeline::compile_native_pilot_profiled(input).unwrap();
+
+    assert_eq!(measured, expected);
+    let record = profile.render();
+    assert!(record.starts_with("SKALD_PLACEMENT_PROFILE {\"format\":1,"));
+    assert!(record.contains("\"placement_production_ns\":"));
+    assert!(record.contains("\"placement_checking_ns\":"));
+    assert!(record.contains("\"reachable_blocks\":"));
 }
 
 #[test]

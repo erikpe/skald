@@ -19,6 +19,8 @@ pub(in crate::backend) use physical::{
 };
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use pilot::compile_native_pilot;
+#[cfg(test)]
+pub(in crate::backend) use placement::place_native_baseline_profiled;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use placement::{check_native_placement, place_native_baseline};
 #[cfg_attr(not(test), allow(unused_imports))]

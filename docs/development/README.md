@@ -17,6 +17,9 @@ The frozen paired low-level architecture protocol is documented in
 The evidence and decision record for proof-snapshot local constant reuse is
 documented in
 [MIR Analysis Reuse Measurements](MIR_ANALYSIS_REUSE_MEASUREMENTS.md).
+The native-pilot phase baseline and placement scalability protocol are
+documented in
+[Placement Checking Performance](PLACEMENT_CHECKING_PERFORMANCE.md).
 
 ## Prerequisites
 
@@ -137,6 +140,14 @@ cleanup workload matrix. It uses the `golden` compiler profile, unique run
 directories, subprocess watchdogs, repeated artifact and semantic checks, and
 paired native execution order. It remains outside both validation gates; see
 [Cleanup Measurement Baseline](CLEANUP_MEASUREMENTS.md).
+
+`make placement-checking-benchmark` measures the maintained recursive-optional,
+array-lifecycle and small control witnesses in isolated compiler-test
+processes. It separates placement production from independent checking,
+records deterministic work dimensions and writes repeated timing/RSS reports
+below ignored `build/measurements/placement-checking/`. It remains outside both
+validation gates; see
+[Placement Checking Performance](PLACEMENT_CHECKING_PERFORMANCE.md).
 
 The [copy-capability materialization measurement record](COPY_CAPABILITY_MATERIALIZATION_MEASUREMENTS.md)
 preserves structural reconstruction counts, exact lifecycle behavior, the

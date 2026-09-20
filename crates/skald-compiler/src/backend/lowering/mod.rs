@@ -31,7 +31,7 @@ mod worklist;
 pub(in crate::backend) use error::LowerError;
 pub(in crate::backend) use worklist::lower_program_with;
 #[cfg(test)]
-pub(in crate::backend) use worklist::{lower_next, lower_program};
+pub(in crate::backend) use worklist::{lower_next, lower_program, lower_program_with_profile};
 
 #[cfg(test)]
 mod tests;

@@ -5,6 +5,7 @@ GOLDEN_COMPILER := target/$(GOLDEN_PROFILE)/skac
 GOLDEN_RELEASE_RUNNER := target/release/skald-golden
 GOLDEN_RELEASE_COMPILER := target/release/skac
 CLEANUP_BASELINE_ARGS ?=
+PLACEMENT_CHECKING_ARGS ?=
 
 .PHONY: help fmt runtime fmt-check build-check lint docs-check static-check \
 	workspace-test compiler-test binary64-test cli-test docs-test golden-runner-test \
@@ -12,7 +13,8 @@ CLEANUP_BASELINE_ARGS ?=
 	golden-release-tools golden-expectations-test golden-test \
 	golden-release-test golden-filter golden-exact \
 	golden-determinism-test runtime-test runtime-trace-benchmark test-core test \
-	generic-vec-benchmark range-loop-benchmark cleanup-baseline mir-redundancy-measure \
+	generic-vec-benchmark range-loop-benchmark cleanup-baseline placement-checking-benchmark \
+	mir-redundancy-measure \
 	msrv-check robustness-long check-core check check-long
 
 help:
@@ -52,6 +54,7 @@ help:
 	@echo "  make generic-vec-benchmark Measure representative generic Vec growth"
 	@echo "  make range-loop-benchmark Compare fused ranges with matched while loops"
 	@echo "  make cleanup-baseline Capture the repository cleanup measurement baseline"
+	@echo "  make placement-checking-benchmark Measure native placement phase scalability"
 	@echo "  make mir-redundancy-measure Measure the reviewed final-MIR redundancy corpus"
 	@echo "  make msrv-check       Type-check every Rust target with the declared MSRV"
 	@echo "  make robustness-long  Run extended deterministic frontend robustness tests"
@@ -150,6 +153,9 @@ range-loop-benchmark: runtime golden-tools
 
 cleanup-baseline: runtime golden-tools
 	python3 scripts/measure_cleanup_baseline.py $(CLEANUP_BASELINE_ARGS) --compiler $(GOLDEN_COMPILER) --compiler-profile $(GOLDEN_PROFILE)
+
+placement-checking-benchmark:
+	python3 scripts/measure_placement_checking.py $(PLACEMENT_CHECKING_ARGS)
 
 mir-redundancy-measure:
 	cargo run --quiet --locked -p skald-mir-measure -- \

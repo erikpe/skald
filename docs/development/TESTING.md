@@ -1644,6 +1644,14 @@ compile and native run and every compile failure. The non-gating
 `make generic-vec-benchmark` procedure measures representative growth, copy,
 pop, and clear behavior without accepting or rejecting host timing.
 
+The non-gating `make placement-checking-benchmark` procedure runs the retained
+recursive-optional, array-lifecycle and small native-pipeline witnesses in
+isolated processes. A test-only observer separates placement production and
+checking while recording deterministic solver work; ordinary test outcomes and
+compiler dumps contain no elapsed values. See
+[Placement Checking Performance](PLACEMENT_CHECKING_PERFORMANCE.md) for witness
+identities, the reproduction protocol and interpretation limits.
+
 This owner also covers empty, spare-capacity, and grown `to_array()` snapshots
 across primitive, exact-class, optional, nested-array, shared exact/base/
 interface/`Obj`, optional-owner, and shared optional-box elements. Those cases

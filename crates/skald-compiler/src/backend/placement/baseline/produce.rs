@@ -21,6 +21,13 @@ pub(in crate::backend) fn place_baseline<'s, 'p, P: Payload>(
     selected: &'s VerifiedSelectedCallable<'p, P>,
     target: &impl PlacementTarget,
 ) -> Result<CheckedPlacement<'s, 'p, P>, CheckFailure> {
+    check_placement(produce_baseline(selected, target)?, target)
+}
+
+pub(in crate::backend) fn produce_baseline<'s, 'p, P: Payload>(
+    selected: &'s VerifiedSelectedCallable<'p, P>,
+    target: &impl PlacementTarget,
+) -> Result<PlacementDraft<'s, 'p, P>, CheckFailure> {
     let mut draft = PlacementDraft::new(selected);
     let context = selected.draft().context();
     if context.catalog().plan().profile() != target.profile() {
@@ -216,7 +223,7 @@ pub(in crate::backend) fn place_baseline<'s, 'p, P: Payload>(
         }
         Ok(())
     })?;
-    check_placement(draft, target)
+    Ok(draft)
 }
 fn node<P: Payload>(
     draft: &mut PlacementDraft<'_, '_, P>,

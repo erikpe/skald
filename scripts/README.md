@@ -60,6 +60,21 @@ selected with `SKALD_RUNTIME_ARCHIVE` must have its `build-config.txt` sibling;
 this prevents measurements from silently using an artifact of unknown origin.
 The helper's focused tests run through `make measurement-support-test`.
 
+`measure_placement_checking.py` measures the maintained recursive-optional,
+array-lifecycle and control witnesses through a test-only native-pilot phase
+observer:
+
+```text
+make placement-checking-benchmark
+make placement-checking-benchmark PLACEMENT_CHECKING_ARGS='--witness recursive-optionals --repeats 2'
+```
+
+It prebuilds the test executable, alternates isolated witness order, verifies
+that deterministic dimensions agree across repetitions and writes raw JSON to
+an ignored unique directory under `build/measurements/placement-checking/`.
+The protocol and PS01 baseline are documented in
+[Placement Checking Performance](../docs/development/PLACEMENT_CHECKING_PERFORMANCE.md).
+
 `verify_low_level_baseline.py` verifies the retained foundation evidence hashes,
 build/manifest identities, full raw execution order and counts, untimed
 observations/native output, deterministic artifacts, and replayed comparison.

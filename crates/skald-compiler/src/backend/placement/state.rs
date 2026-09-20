@@ -12,10 +12,14 @@ impl State {
     pub fn top(locations: usize, tokens: &[TransferValue]) -> Self {
         Self(vec![tokens.iter().copied().collect(); locations])
     }
-    pub fn intersect(&mut self, other: &Self) {
+    pub fn intersect(&mut self, other: &Self) -> usize {
+        let mut removed = 0;
         for (left, right) in self.0.iter_mut().zip(&other.0) {
+            let before = left.len();
             left.retain(|token| right.contains(token));
+            removed += before - left.len();
         }
+        removed
     }
     pub fn forget(&mut self, token: TransferValue) {
         for contents in &mut self.0 {

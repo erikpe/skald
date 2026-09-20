@@ -74,20 +74,59 @@ pub(in crate::backend) fn lower_program<'plan>(
 /// preserving the rule that consumer failure cannot publish lower-program closure.
 pub(in crate::backend) fn lower_program_with<'plan, E>(
     planned: &'plan PlannedProgram<'_>,
+    consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), E>,
+) -> Result<crate::backend::lir::VerifiedProgram<'plan>, E>
+where
+    E: From<LowerError>,
+{
+    lower_program_with_timing(planned, consume, None)
+}
+
+#[cfg(test)]
+pub(in crate::backend) fn lower_program_with_profile<'plan, E>(
+    planned: &'plan PlannedProgram<'_>,
+    consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), E>,
+    elapsed: &mut std::time::Duration,
+) -> Result<crate::backend::lir::VerifiedProgram<'plan>, E>
+where
+    E: From<LowerError>,
+{
+    lower_program_with_timing(planned, consume, Some(elapsed))
+}
+
+fn lower_program_with_timing<'plan, E>(
+    planned: &'plan PlannedProgram<'_>,
     mut consume: impl FnMut(VerifiedCallable<'plan>) -> Result<(), E>,
+    mut elapsed: Option<&mut std::time::Duration>,
 ) -> Result<crate::backend::lir::VerifiedProgram<'plan>, E>
 where
     E: From<LowerError>,
 {
     let mut worklist = ProgramBuilder::new(planned.plan().view());
-    while let Some(body) = lower_next(planned, &mut worklist).map_err(E::from)? {
+    while let Some(body) =
+        timed(&mut elapsed, || lower_next(planned, &mut worklist)).map_err(E::from)?
+    {
         consume(body)?;
     }
-    super::data::define(planned, &mut worklist).map_err(E::from)?;
+    timed(&mut elapsed, || super::data::define(planned, &mut worklist)).map_err(E::from)?;
     // Typed data edges can discover generated finalizers after source bodies
     // have been released. Close those edges through the same ordinary worklist.
-    while let Some(body) = lower_next(planned, &mut worklist).map_err(E::from)? {
+    while let Some(body) =
+        timed(&mut elapsed, || lower_next(planned, &mut worklist)).map_err(E::from)?
+    {
         consume(body)?;
     }
-    worklist.finish().map_err(LowerError::from).map_err(E::from)
+    timed(&mut elapsed, || worklist.finish())
+        .map_err(LowerError::from)
+        .map_err(E::from)
+}
+
+fn timed<T>(elapsed: &mut Option<&mut std::time::Duration>, operation: impl FnOnce() -> T) -> T {
+    let Some(elapsed) = elapsed.as_deref_mut() else {
+        return operation();
+    };
+    let started = std::time::Instant::now();
+    let result = operation();
+    *elapsed += started.elapsed();
+    result
 }

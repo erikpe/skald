@@ -444,6 +444,24 @@ pub(crate) fn run_native_assembly_output(output: &str) -> std::process::Output {
     command.output().unwrap()
 }
 
+pub(crate) fn run_native_assembly_output_profiled(
+    output: &str,
+) -> (std::process::Output, NativeExecutionProfile) {
+    let started = std::time::Instant::now();
+    let (executable, mut command) = build_native_assembly(output);
+    let link = started.elapsed();
+    let started = std::time::Instant::now();
+    let result = command.output().unwrap();
+    drop(executable);
+    (
+        result,
+        NativeExecutionProfile {
+            link,
+            execution: started.elapsed(),
+        },
+    )
+}
+
 /// Links generated assembly with the real runtime and the trace-chain probe
 /// used by backend activation tests. The probe also validates at process exit
 /// that the source entry function restored the outermost TLS link to null.
@@ -494,6 +512,34 @@ pub(crate) fn run_native_assembly_with_c_probe(
     output: &str,
     probe_source: &str,
 ) -> std::process::Output {
+    let executable = link_native_assembly_with_c_probe(output, probe_source);
+    Command::new(executable.path()).output().unwrap()
+}
+
+pub(crate) struct NativeExecutionProfile {
+    pub link: std::time::Duration,
+    pub execution: std::time::Duration,
+}
+
+pub(crate) fn run_native_assembly_with_c_probe_profiled(
+    output: &str,
+    probe_source: &str,
+) -> (std::process::Output, NativeExecutionProfile) {
+    let started = std::time::Instant::now();
+    let executable = link_native_assembly_with_c_probe(output, probe_source);
+    let link = started.elapsed();
+    let started = std::time::Instant::now();
+    let result = Command::new(executable.path()).output().unwrap();
+    (
+        result,
+        NativeExecutionProfile {
+            link,
+            execution: started.elapsed(),
+        },
+    )
+}
+
+fn link_native_assembly_with_c_probe(output: &str, probe_source: &str) -> TemporaryFile {
     let executable = TemporaryFile::new("native-c-probe-executable").unwrap();
     let probe = TemporaryFile::new("native-c-probe.c").unwrap();
     fs::write(probe.path(), probe_source).unwrap();
@@ -531,7 +577,7 @@ pub(crate) fn run_native_assembly_with_c_probe(
         "linker rejected generated C-probe output:\n{}\nassembly:\n{output}",
         String::from_utf8_lossy(&linked.stderr)
     );
-    Command::new(executable.path()).output().unwrap()
+    executable
 }
 
 fn build_native_assembly(output: &str) -> (TemporaryFile, Command) {

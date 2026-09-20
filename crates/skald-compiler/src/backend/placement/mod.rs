@@ -4,6 +4,7 @@
 mod baseline;
 mod check;
 mod legality;
+mod measurement;
 mod model;
 mod requirements;
 mod state;
@@ -13,8 +14,14 @@ mod transfers;
 
 pub(in crate::backend) use baseline::place_baseline;
 
+#[cfg(test)]
+pub(in crate::backend) use baseline::produce_baseline;
+
+#[cfg(test)]
+pub(in crate::backend) use check::check_placement_profiled;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use check::{check_placement, CheckedPlacement};
+pub(in crate::backend) use measurement::PlacementCheckMetrics;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use requirements::{CheckFailure, CheckLocation, CheckReason};
 #[cfg_attr(not(test), allow(unused_imports))]
