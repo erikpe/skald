@@ -8,16 +8,18 @@ not by roadmap history.
 
 ## Implementation roadmaps
 
-No implementation roadmap is active. The next program step is a focused LA05
-architecture consolidation and adoption design.
+No implementation roadmap is active. Review the placement-checking scalability
+design and, if accepted, implement it before the focused LA05 architecture
+consolidation and adoption design.
 
 ## Pending discovery and planning records
 
 | Record | Status | Purpose | Next step | Dependencies |
 | --- | --- | --- | --- | --- |
-| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; LA01–LA04 complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Create the LA05 architecture consolidation and adoption design | Full private parity and maintained coverage; adoption and allocation remain separate |
+| [Placement checking scalability](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md) | Draft design promoted from D01/D02 | Preserve independent placement authority while replacing excessive full-CFG convergence work and keeping all native witnesses in the ordinary suite | Review, freeze and create a focused implementation roadmap | Complete private parity, accepted placement semantics and the six measured optional/array witnesses |
+| [Low-level compiler architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md) | Accepted direction; LA01–LA04 complete | Establish explicit LIR phases and shared/target backend ownership, then implement register allocation as a separate final workstream | Resolve D01/D02, then create the LA05 architecture consolidation and adoption design | Full private parity and maintained coverage; adoption and allocation remain separate |
 | [Low-level compiler migration coverage](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) | Full private parity complete | Maintain operation/helper coverage, phase authority, witnesses and baseline handoff through full migration and adoption | Carry the reconciled matrix into LA05 without clearing retained cost qualifications | Frozen model, complete private pipeline and durable baseline; adoption cost clearance remains pending |
-| [Complete lowering migration discoveries](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md) | Two blocking LA05 placement-cost inputs | Track recursive optional/array CFG cost without weakening lifecycle semantics | Define representative bounds and an optimize-or-accept decision in the LA05 design | Complete private lifecycle pipeline and allocation-independent baseline placement |
+| [Complete lowering migration discoveries](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md) | Two blocking inputs promoted into a draft design | Track recursive optional/array CFG cost without weakening lifecycle semantics | Use both findings as separate acceptance witnesses for the placement-checking scalability design | Complete private lifecycle pipeline and allocation-independent baseline placement |
 | [Auric port feasibility](AURIC_PORT_FEASIBILITY.md) | Actionable investigation | Assess a silent Oric emulator in Skald, including CPU/VIA/AY keyboard behavior, video, tape loading, and comparison with Doom | Select firmware/game images and validate CPU/bus throughput plus the shared framebuffer bridge | Existing byte arithmetic, arrays and aliases; proposed shared-array native bridge; external firmware and game images |
 | [Doom port feasibility](DOOM_PORT_FEASIBILITY.md) | Actionable investigation | Assess a Skald engine port with a small native platform library, including scope, language gaps, and division-helper evidence | Settle a minimal shared-array handle bridge and numerical helpers, then build the host/framebuffer spike | Existing arrays, I/O, primitive interop; optional 32-bit integer support |
 | [Codebase cleanup audit](CODEBASE_CLEANUP_AUDIT.md) | Actionable audit | Rank repository-wide robustness, ownership, maintainability, and efficiency improvements | Select work using the accepted retrospective readiness table and per-finding prerequisites | Dependencies are recorded per finding; publication ownership is complete |

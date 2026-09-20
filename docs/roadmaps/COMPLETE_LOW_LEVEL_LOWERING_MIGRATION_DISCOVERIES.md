@@ -4,6 +4,11 @@ Items here are intentionally outside the active PR-sized task that exposed
 them. LM18 confirmed both on the complete private pipeline; cumulative review
 should bound and assign them without weakening semantic expansion.
 
+Both findings are promoted into the draft
+[Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md).
+They remain open as separate acceptance witnesses until that design is accepted,
+implemented and measured.
+
 ## D01 — Branch-heavy recursive optionals amplify baseline placement cost
 
 LM11's focused two-layer nested optional copy executes correctly, and combined
@@ -20,6 +25,8 @@ LA05 acceptance input: the adoption design must define a representative bound,
 measure it on the production-selectable path, and either improve the placement
 worklist/CFG cost or explicitly accept the measured limit before enabling the
 new backend by default. Priority is high; placement owns the implementation.
+The promoted design keeps this finding as the recursive-optional performance
+witness.
 
 ## D02 — Live array element loads amplify baseline placement cost
 
@@ -34,4 +41,6 @@ CFG where the evidence points. LM18's full private suite again found the array
 lifecycle cases to dominate runtime. LM19 transfers this as the same blocking
 LA05 acceptance input as D01, with a separate loaded-element witness so a fix
 cannot hide only recursive-optionals cost. Priority is high; placement owns the
-implementation and LA05 owns the measured adoption decision.
+implementation and LA05 owns the broader measured adoption decision. The
+promoted design keeps this finding as the live array-element performance
+witness.
