@@ -3,14 +3,6 @@
 use crate::backend::selected::{BankKind, ResourceCatalog, UnitId, ViewId};
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::super::{
-    check::SolverObservation,
-    model::PlacementDraft,
-    requirements::{CheckLocation, CheckReason, Requirements},
-    state::State as ProductionState,
-};
-use crate::backend::{graph::SelectedBlockId, selected::Payload};
-
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 enum Loc {
     Register(ViewId),
@@ -319,113 +311,6 @@ fn graph(
     panic!("finite descending-state bound exceeded");
 }
 
-/// Independent Jacobi schedule over the production transition semantics.
-///
-/// The action oracle above owns the semantic model. This adapter deliberately
-/// duplicates only reachability, round joining, termination and stable replay,
-/// so future production scheduling can be compared without sharing its control
-/// flow.
-pub(super) fn observe_round_solver<P: Payload>(
-    requirements: &Requirements<'_, P>,
-    draft: &PlacementDraft<'_, '_, P>,
-) -> SolverObservation {
-    let mut reachable = BTreeSet::from([requirements.entry]);
-    let mut pending = vec![requirements.entry];
-    while let Some(block) = pending.pop() {
-        for (target, _) in &requirements.blocks[&block].edges {
-            if reachable.insert(*target) {
-                pending.push(*target);
-            }
-        }
-    }
-
-    let Some(bound) = oracle_iteration_bound(
-        reachable.len(),
-        requirements.locations.len(),
-        requirements.tokens().len(),
-    ) else {
-        return SolverObservation {
-            fixed_point: None,
-            outcome: Err(requirements.failure(CheckLocation::Entry, CheckReason::Capacity)),
-        };
-    };
-    let top = ProductionState::top(requirements.locations.len(), &requirements.token_layout)
-        .expect("production state dimensions were checked during collection");
-    let mut states: BTreeMap<SelectedBlockId, ProductionState> = reachable
-        .iter()
-        .map(|&block| (block, top.clone()))
-        .collect();
-    states.insert(requirements.entry, requirements.seed.clone());
-
-    for _ in 0..bound {
-        let mut joined: BTreeMap<SelectedBlockId, ProductionState> = reachable
-            .iter()
-            .map(|&block| (block, top.clone()))
-            .collect();
-        joined.insert(requirements.entry, requirements.seed.clone());
-        for &block in &reachable {
-            let mut output = states[&block].clone();
-            if let Err(failure) = requirements.block(draft, &mut output, block, false) {
-                return SolverObservation {
-                    fixed_point: None,
-                    outcome: Err(failure),
-                };
-            }
-            for (slot, (target, _)) in requirements.blocks[&block].edges.iter().enumerate() {
-                let mut outgoing = output.clone();
-                if let Err(failure) = requirements.edge(draft, &mut outgoing, block, slot, false) {
-                    return SolverObservation {
-                        fixed_point: None,
-                        outcome: Err(failure),
-                    };
-                }
-                joined
-                    .get_mut(target)
-                    .expect("reachable successor")
-                    .intersect(&outgoing);
-            }
-        }
-        if joined == states {
-            return SolverObservation {
-                fixed_point: Some(requirements.digest(&states)),
-                outcome: replay_stable_states(requirements, draft, &states),
-            };
-        }
-        states = joined;
-    }
-
-    SolverObservation {
-        fixed_point: None,
-        outcome: Err(requirements.failure(CheckLocation::Entry, CheckReason::Convergence)),
-    }
-}
-
-fn replay_stable_states<P: Payload>(
-    requirements: &Requirements<'_, P>,
-    draft: &PlacementDraft<'_, '_, P>,
-    states: &BTreeMap<SelectedBlockId, ProductionState>,
-) -> Result<(), super::super::requirements::CheckFailure> {
-    for (&block, state) in states {
-        let mut output = state.clone();
-        requirements.block(draft, &mut output, block, true)?;
-        for slot in 0..requirements.blocks[&block].edges.len() {
-            let mut outgoing = output.clone();
-            requirements.edge(draft, &mut outgoing, block, slot, true)?;
-        }
-    }
-    Ok(())
-}
-
-pub(super) fn oracle_iteration_bound(
-    blocks: usize,
-    locations: usize,
-    tokens: usize,
-) -> Option<usize> {
-    blocks
-        .checked_mul(locations)?
-        .checked_mul(tokens)?
-        .checked_add(1)
-}
 #[test]
 fn destructive_tie_requires_a_surviving_copy_of_a_live_input() {
     let m = machine(false);

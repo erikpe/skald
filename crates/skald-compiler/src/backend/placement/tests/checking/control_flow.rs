@@ -59,7 +59,7 @@ fn duplicate_edges_are_all_checked_and_joins_require_every_predecessor() {
                     ),
                 );
             }
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if count == 2 {
                 assert!(checked.is_ok(), "{:?}", checked.err());
             } else {
@@ -200,7 +200,7 @@ fn loop_swaps_rebind_parameters_simultaneously_and_forget_old_epochs() {
                     ),
                 );
             }
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if resolve && !stale {
                 assert!(checked.is_ok(), "{:?}", checked.err());
             } else {
@@ -281,7 +281,7 @@ fn loop_definitions_cannot_reuse_a_home_from_an_earlier_iteration() {
                     Location::Resource(target.ints[1]),
                 ),
             );
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if fresh {
                 assert!(checked.is_ok(), "{:?}", checked.err());
             } else {
@@ -324,7 +324,7 @@ fn a_divergent_predecessor_cannot_supply_a_join_value() {
             operand(&mut draft, entry, 0, 0, target.ints[0]);
             operand(&mut draft, right, 0, 0, view);
             operand(&mut draft, join, 0, 0, target.ints[0]);
-            let result = check_with_round_oracle(draft, target);
+            let result = check_placement(draft, target);
             if view == target.ints[0] {
                 reject(result, CheckReason::MissingValue);
             } else {
@@ -410,7 +410,7 @@ fn parameter_coalescing_requires_proven_equal_current_arguments() {
                     ),
                 );
             }
-            let result = check_with_round_oracle(draft, target);
+            let result = check_placement(draft, target);
             if equal {
                 assert!(result.is_ok(), "{:?}", result.err());
             } else {

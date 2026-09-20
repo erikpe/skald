@@ -1,14 +1,14 @@
 # Placement Checking Scalability Roadmap
 
-Status: active; PS01 through PS06 are complete, PS04 and PS05 were skipped at
-their measured stop conditions, and PS07 cumulative closure is next.
+Status: complete and archived. PS04 and PS05 were skipped at their measured stop
+conditions; PS07 reconciled the cumulative implementation and closed D01/D02.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
 Implementation baseline: `9eafca80`, the committed roadmap revision immediately
 before PS01 changed code or measurement support.
 Accepted design:
 [Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md).
 Parent program:
-[Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+[Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 
 This roadmap resolves the recursive-optional and live-array placement-cost
 discoveries before LA05 production adoption. It keeps independent placement
@@ -71,7 +71,7 @@ accepting a timing-dependent result.
 - [x] PS04 — Skip immutable relation indices at the compact-state checkpoint
 - [x] PS05 — Skip the worklist at the schedule checkpoint
 - [x] PS06 — Pass the optional/array performance acceptance checkpoint
-- [ ] PS07 — Cumulative review, artifact cleanup and closure
+- [x] PS07 — Cumulative review, artifact cleanup and closure
 
 ## PR-sized implementation sequence
 
@@ -326,24 +326,24 @@ D01 and D02 both pass PS06 and are ready for formal closure during PS07.
 **Purpose:** review the whole scalability change as one correctness-boundary
 revision, remove temporary machinery and hand a maintainable checker to LA05.
 
-- [ ] Review `git diff <implementation-baseline>..HEAD` in stat, name-status and
+- [x] Review `git diff <implementation-baseline>..HEAD` in stat, name-status and
   full forms, plus staged, unstaged and untracked work. Use commit history to
   include scaffolding introduced and removed across manually committed tasks.
-- [ ] Reconcile every artifact-ledger entry. Remove temporary timing seams,
+- [x] Reconcile every artifact-ledger entry. Remove temporary timing seams,
   duplicate round implementations, comparison-only exports, allowances and
   diagnostic output; retain only measurement/oracle support with a continuing
   documented LA05 or regression role.
-- [ ] Review state, indices and solver modules for cohesive ownership, narrow
+- [x] Review state, indices and solver modules for cohesive ownership, narrow
   visibility, clear invariants and absence of target-specific assumptions.
-- [ ] Confirm the accepted design, living placement/backend/testing contracts,
+- [x] Confirm the accepted design, living placement/backend/testing contracts,
   measurements and implementation agree; remove roadmap codes from living code
   and comments.
-- [ ] Mark D01 and D02 resolved with links to retained evidence, update the
+- [x] Mark D01 and D02 resolved with links to retained evidence, update the
   low-level architecture and migration handoff, and make LA05 design the next
   active program step.
-- [ ] Run the complete repository gates from an artifact-free snapshot or clean
+- [x] Run the complete repository gates from an artifact-free snapshot or clean
   checkout and repeat the final measurement protocol.
-- [ ] Record baseline, endpoint, validation and residual artifact dispositions;
+- [x] Record baseline, endpoint, validation and residual artifact dispositions;
   mark the roadmap complete, archive it and its frozen design, and repair all
   indexes and relative links.
 
@@ -356,24 +356,37 @@ authority and deterministic failures, all accepted performance bounds still
 pass, no temporary bridge or hidden alternate solver remains, D01/D02 are
 closed, and LA05 receives one maintained scalable baseline checker.
 
+**Completed:** cumulative review compared implementation baseline `9eafca80`
+through committed endpoint `224b2cd2`, then reviewed the PS07 residual diff.
+The comparison-only fixed-point digest, duplicate Jacobi scheduler, stable
+replay and helper exports were removed because the worklist was skipped. The
+independent semantic action oracle, genuine selected-graph regressions, compact
+state, test-only measurements and six ordinary native witnesses remain.
+
+The final two-repeat report at
+`build/measurements/placement-checking/run-kacrbcw_/report.json` preserves all
+accepted bounds: D01 is 19.3x faster, D02 is 45.5x–119.9x faster, the worst
+witness is 2.416 seconds, and the former 891.8 MiB peak is 51.3 MiB. Focused
+placement tests, measurement tests, `make check` in both the working tree and
+an artifact-free source snapshot, `make check-long` (including
+`make msrv-check`), documentation validation and diff hygiene passed at the
+closure endpoint. D01/D02 are resolved, and LA05 design is the next program
+step.
+
 ## Artifact ledger
 
 | Artifact | Introduced | Intended disposition | Retention criterion |
 | --- | --- | --- | --- |
-| `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, `974ecb20` | Review and narrow/remove in PS07 | Retain only if the test-only interface remains deterministic, has no ordinary-compilation output and is used by LA05 measurement |
-| `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, `974ecb20` | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
-| `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, `8957e382` | Remove or keep test-only in PS07 | Retain only if they materially protect solver equivalence without exposing authority or adding material suite cost |
-| `observe_round_solver` and independent stable replay | PS02, `8957e382` | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
-| `tests/equivalence.rs` generated solver-equivalence cases | PS02, `8957e382` | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
+| `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, `974ecb20` | Retained, test-only | Deterministic structural observations and optional elapsed records serve the maintained regression protocol and LA05; ordinary compilation has no output or interface |
+| `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, `974ecb20` | Retained through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
+| `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, `8957e382` | Removed in PS07 | With PS05 skipped they duplicated the sole production schedule and no longer compared implementations |
+| `observe_round_solver` and duplicate stable replay | PS02, `8957e382` | Removed in PS07 | The independent semantic action oracle remains; duplicate production transition/control flow did not add independent evidence |
+| `tests/equivalence.rs` generated solver-equivalence cases | PS02, `8957e382` | Retained as `tests/generated.rs` | Bounded genuine selected graphs now exercise deterministic acceptance directly without a hidden alternate solver |
 | `TokenLayout`, `BitMatrix` and compact `State` | PS03, `24029bcc` | Retain | Production representation; deterministic layout, canonical final-word masking, checked dimensions and semantic-only callers |
 | Immutable relation indices | PS04 checkpoint, `c3978118`; not introduced | Skipped | No relation had a material measured cost after compact state; direct target/draft queries remain authoritative |
 | Deterministic worklist | PS05 checkpoint, `c3978118`; not introduced | Skipped | Accepted performance already met; deterministic-round production and its living contract remain unchanged |
 
-Update this ledger as commits introduce concrete symbols. Record the introducing
-task and commit, removal task and final disposition. New discoveries that do not
-block this roadmap belong in
-`docs/roadmaps/PLACEMENT_CHECKING_SCALABILITY_DISCOVERIES.md`, created only when
-there is an actionable finding.
+No unresolved discovery was found during cumulative review.
 
 ## Ordering and dependencies
 

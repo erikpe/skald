@@ -62,7 +62,7 @@ fn calls_kill_caller_values_but_explicit_save_and_reload_work() {
                     ),
                 );
             }
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if saved {
                 assert!(checked.is_ok(), "{:?}", checked.err());
             } else {
@@ -119,7 +119,7 @@ fn marshaling_cannot_overwrite_a_secured_indirect_target() {
                     ),
                 );
             }
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if overwrite {
                 reject(checked, CheckReason::MissingValue);
             } else {
@@ -175,10 +175,7 @@ fn call_clobbers_invalidate_outgoing_slots_and_scratch_kills_held_values() {
             TransferPoint::After(site),
             copy(v.id(), bits(), slot, Location::Resource(target.ints[0])),
         );
-        reject(
-            check_with_round_oracle(draft, target),
-            CheckReason::MissingValue,
-        );
+        reject(check_placement(draft, target), CheckReason::MissingValue);
     });
     fixture(false, |context, lower, target| {
         let (mut b, entry) = begin(context, lower);
@@ -213,9 +210,6 @@ fn call_clobbers_invalidate_outgoing_slots_and_scratch_kills_held_values() {
                 )
                 .unwrap();
         }
-        reject(
-            check_with_round_oracle(draft, target),
-            CheckReason::MissingValue,
-        );
+        reject(check_placement(draft, target), CheckReason::MissingValue);
     });
 }

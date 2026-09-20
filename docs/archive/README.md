@@ -25,6 +25,9 @@ For current information, use:
 
 Archived plans:
 
+- [Placement checking scalability frozen design](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md)
+- [Placement checking scalability](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md)
+- [Complete low-level lowering migration resolved discoveries](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md)
 - [Complete low-level lowering migration frozen design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 - [Complete low-level lowering migration](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
 - [Low-level compiler architecture resolved discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)

@@ -1,13 +1,13 @@
 # Placement Checking Scalability Design Proposal
 
-Status: accepted, frozen and promoted, 2026-09-20. Accepted after review of the
-draft committed as `b3b109c7`. Implementation:
+Status: accepted, frozen, implemented and archived, 2026-09-20. Accepted after
+review of the draft committed as `b3b109c7`. Implementation:
 [Placement Checking Scalability Roadmap](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md).
 Source assessment: `0ec22432`, after complete private low-level lowering parity. Parent:
-[Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+[Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Promoted inputs: [complete lowering migration discoveries D01 and D02](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md).
-Implement this focused correction before starting LA05 architecture
-consolidation and adoption.
+The focused correction is complete; LA05 architecture consolidation and
+adoption is the next program step.
 
 ## Purpose and completion boundary
 

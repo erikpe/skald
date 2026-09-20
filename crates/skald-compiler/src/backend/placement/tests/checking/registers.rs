@@ -21,7 +21,7 @@ fn register_only_acceptance_and_snapshot_authority() {
             operand(&mut draft, entry, 0, 0, target.ints[0]);
             operand(&mut draft, entry, 1, 0, view);
             if view == target.ints[0] {
-                let checked = check_with_round_oracle(draft, target).unwrap();
+                let checked = check_placement(draft, target).unwrap();
                 assert!(std::ptr::eq(checked.selected(), &selected));
                 assert!(checked.storage().is_empty());
                 assert!(checked.transfers(TransferPoint::Entry).is_empty());
@@ -42,7 +42,7 @@ fn register_only_acceptance_and_snapshot_authority() {
                 );
             } else {
                 reject(
-                    check_with_round_oracle(draft, target),
+                    check_placement(draft, target),
                     if view == target.reserved {
                         CheckReason::Reserved
                     } else {
@@ -117,7 +117,7 @@ fn live_tied_input_requires_an_actual_copy_and_exact_tie() {
                     ),
                 );
             }
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if untie {
                 reject(checked, CheckReason::Tie);
             } else if copy_input {
@@ -168,7 +168,7 @@ fn simultaneous_scratch_is_disjoint_and_invalid_unreachable_code_is_rejected() {
                     Location::Resource(view),
                 )
                 .unwrap();
-            let checked = check_with_round_oracle(draft, target);
+            let checked = check_placement(draft, target);
             if view == target.ints[2] {
                 assert!(checked.is_ok());
             } else {
@@ -197,10 +197,7 @@ fn narrow_writes_do_not_certify_wide_values() {
         operand(&mut draft, entry, 0, 0, target.ints[0]);
         operand(&mut draft, entry, 1, 0, target.byte);
         operand(&mut draft, entry, 2, 0, target.ints[0]);
-        reject(
-            check_with_round_oracle(draft, target),
-            CheckReason::MissingValue,
-        );
+        reject(check_placement(draft, target), CheckReason::MissingValue);
     });
 }
 
@@ -231,7 +228,7 @@ fn early_definitions_precede_late_uses_and_same_phase_definitions_do_not_alias()
             operand(&mut draft, entry, 0, 0, target.ints[0]);
             operand(&mut draft, entry, 1, 0, target.ints[0]);
             operand(&mut draft, entry, 1, 1, view);
-            let result = check_with_round_oracle(draft, target);
+            let result = check_placement(draft, target);
             if view == target.ints[0] {
                 reject(result, CheckReason::MissingValue);
             } else {
@@ -255,7 +252,7 @@ fn early_definitions_precede_late_uses_and_same_phase_definitions_do_not_alias()
             let mut draft = PlacementDraft::new(&selected);
             operand(&mut draft, entry, 0, 0, target.ints[0]);
             operand(&mut draft, entry, 0, 1, view);
-            let result = check_with_round_oracle(draft, target);
+            let result = check_placement(draft, target);
             if view == target.ints[0] {
                 reject(result, CheckReason::Overlap);
             } else {
@@ -289,7 +286,7 @@ fn structure_and_availability_failures_retain_selected_provenance() {
             if complete {
                 operand(&mut draft, exit, 0, 0, target.ints[1]);
             }
-            let failure = check_with_round_oracle(draft, target).err().unwrap();
+            let failure = check_placement(draft, target).err().unwrap();
             assert_eq!(failure.origin, Some(origin));
             assert_eq!(
                 failure.location,

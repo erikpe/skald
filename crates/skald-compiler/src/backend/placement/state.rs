@@ -209,13 +209,6 @@ impl State {
             self.contents.remove(location, bit);
         }
     }
-
-    #[cfg(test)]
-    pub fn canonical(&self) -> Vec<Vec<TransferValue>> {
-        (0..self.contents.locations)
-            .map(|location| self.capture(location, |_| true).into_iter().collect())
-            .collect()
-    }
 }
 
 impl<P: Payload> Requirements<'_, P> {

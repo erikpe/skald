@@ -920,8 +920,10 @@ catalog. Independent placement checking now consumes drafts into a privately
 constructed immutable checked product after static legality, finite convergence
 and strict replay. Hand-written register placements, genuine native call results
 and deliberate transfer/event/join/scratch/preservation corruption exercise the
-same interface. The test oracle remains independent. Native checking supplies
-canonical preservation promises, ABI footprints and explicit move recipes.
+same interface. The semantic action oracle remains independent; bounded genuine
+selected-graph tests cover deterministic convergence outcomes without retaining
+a duplicate solver. Native checking supplies canonical preservation promises,
+ABI footprints and explicit move recipes.
 The shared baseline now assigns deterministic unique homes, descriptor-local
 resources and explicit entry, operand, ABI and edge transfers. A separate shared
 parallel-copy resolver uses typed point-local cycle storage and legal declared

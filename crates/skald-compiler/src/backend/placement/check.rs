@@ -13,20 +13,6 @@ pub(in crate::backend) struct CheckedPlacement<'s, 'p, P> {
     draft: PlacementDraft<'s, 'p, P>,
 }
 
-#[cfg(test)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct FixedPointDigest {
-    locations: Vec<Location>,
-    tokens: Vec<TransferValue>,
-    blocks: Vec<(SelectedBlockId, Vec<Vec<TransferValue>>)>,
-}
-
-#[cfg(test)]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct SolverObservation {
-    pub fixed_point: Option<FixedPointDigest>,
-    pub outcome: Result<(), CheckFailure>,
-}
 impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
     pub(in crate::backend) fn assignments(
         &self,
@@ -349,9 +335,8 @@ impl<P: Payload> Requirements<'_, P> {
                 .iter()
                 .map(|block| self.blocks[block].edges.len())
                 .sum();
-            // A full Jacobi round schedules every reachable block. Later
-            // worklist measurements can compare their actual queue peak with
-            // this production-solver baseline.
+            // A full Jacobi round schedules every reachable block, so its
+            // breadth is the deterministic pending-work observation.
             metrics.peak_pending_blocks = reachable.len();
         }
         let bound = iteration_bound(reachable.len(), self.locations.len(), self.tokens().len())
@@ -415,32 +400,6 @@ impl<P: Payload> Requirements<'_, P> {
             }
         }
         Ok(())
-    }
-
-    #[cfg(test)]
-    pub(super) fn observe_solver(&self, draft: &PlacementDraft<'_, '_, P>) -> SolverObservation {
-        match self.converge(draft, None) {
-            Ok(states) => SolverObservation {
-                fixed_point: Some(self.digest(&states)),
-                outcome: self.replay(draft, &states),
-            },
-            Err(failure) => SolverObservation {
-                fixed_point: None,
-                outcome: Err(failure),
-            },
-        }
-    }
-
-    #[cfg(test)]
-    pub(super) fn digest(&self, states: &BTreeMap<SelectedBlockId, State>) -> FixedPointDigest {
-        FixedPointDigest {
-            locations: self.locations.clone(),
-            tokens: self.tokens().to_vec(),
-            blocks: states
-                .iter()
-                .map(|(&block, state)| (block, state.canonical()))
-                .collect(),
-        }
     }
 }
 

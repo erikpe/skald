@@ -1,14 +1,13 @@
 # Complete Low-Level Lowering Migration Discoveries
 
-Items here are intentionally outside the active PR-sized task that exposed
-them. LM18 confirmed both on the complete private pipeline; cumulative review
-should bound and assign them without weakening semantic expansion.
+Status: resolved and archived. Compact placement state closed both findings on
+2026-09-20 without weakening semantic expansion.
 
-Both findings are promoted into the accepted, frozen
-[Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md).
-Its [implementation roadmap](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md) keeps
-them open as separate acceptance witnesses until implementation and measurement
-are complete.
+Both findings were implemented through the frozen
+[Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md)
+and its [completed roadmap](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md). The
+[retained measurements](../development/PLACEMENT_CHECKING_PERFORMANCE.md) keep
+them as separate acceptance witnesses for future regressions.
 
 ## D01 — Branch-heavy recursive optionals amplify baseline placement cost
 
@@ -29,6 +28,11 @@ new backend by default. Priority is high; placement owns the implementation.
 The promoted design keeps this finding as the recursive-optional performance
 witness.
 
+**Resolution:** the compact finite-bitset state reduced the witness median from
+46.59 seconds to 2.416 seconds (19.3x) and peak RSS from 117.9 MiB to 48.1 MiB.
+The ordinary native witness remains enabled, and LA05 can use the retained
+measurement command without carrying a blocking placement-cost qualification.
+
 ## D02 — Live array element loads amplify baseline placement cost
 
 LM12's checked LIR tests cover positive and negative element loads and stores,
@@ -45,3 +49,8 @@ cannot hide only recursive-optionals cost. Priority is high; placement owns the
 implementation and LA05 owns the broader measured adoption decision. The
 promoted design keeps this finding as the live array-element performance
 witness.
+
+**Resolution:** all five retained D02 witnesses improved by 45.5x–119.9x. The
+former worst witness now takes 1.630 seconds and 51.3 MiB rather than 194.85
+seconds and 891.8 MiB. All remain enabled ordinary native tests; LA05 receives
+the scalable baseline checker and the reproducible regression protocol.

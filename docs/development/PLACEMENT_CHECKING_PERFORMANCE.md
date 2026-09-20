@@ -3,8 +3,8 @@
 Status: maintained baseline and measurement protocol for the placement-checking
 scalability roadmap. Timings are observational evidence, not test assertions.
 The accepted scope and thresholds live in the
-[design proposal](../roadmaps/PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md)
-and its [implementation roadmap](../roadmaps/PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md).
+[archived design proposal](../archive/PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md)
+and [completed implementation roadmap](../archive/PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md).
 
 ## Reproducing the measurement
 
@@ -139,9 +139,12 @@ PS05 retained deterministic Jacobi rounds. Structural round work remains
 observable, but placement checking takes only 0.58--1.41 seconds across the D01
 and D02 witnesses and all accepted witness and memory thresholds already pass.
 A worklist would therefore change convergence control flow without a current
-performance requirement. The living placement contract and test-only round
-oracle remain unchanged for PS07 review. PS06 subsequently ran the repeated
-full acceptance measurements and repository gates below.
+performance requirement. The living placement contract remains unchanged.
+The duplicate test-only round scheduler was removed during cumulative review:
+with no alternate production schedule, it repeated the checker rather than
+providing independent evidence. The separate semantic action oracle and bounded
+genuine-graph regressions remain. PS06 subsequently ran the repeated full
+acceptance measurements and repository gates below.
 
 ## PS06 acceptance checkpoint
 
@@ -177,3 +180,27 @@ The PS06 decision is **pass for D01 and D02 independently**:
 
 No fallback, test reclassification or design amendment is needed. PS07 may
 close the two discovery records after its cumulative artifact and diff review.
+
+## Closure measurement
+
+The cumulative-review endpoint used revision `224b2cd2` plus the uncommitted
+PS07 cleanup, with the same two-repeat protocol and host/profile as PS01. The
+retained report is
+`build/measurements/placement-checking/run-kacrbcw_/report.json`.
+
+| Witness | Wall median | Check median | Peak RSS |
+| --- | ---: | ---: | ---: |
+| `recursive-optionals` | 2.416 s | 1.373 s | 48.1 MiB |
+| `primitive-array-allocation` | 0.882 s | 0.584 s | 47.5 MiB |
+| `array-element-lifecycle` | 1.630 s | 1.426 s | 51.3 MiB |
+| `indexed-arrays-and-aliases` | 1.090 s | 0.886 s | 50.3 MiB |
+| `copied-array-slices` | 1.038 s | 0.849 s | 49.6 MiB |
+| `primitive-slice-assignment` | 1.283 s | 1.089 s | 50.8 MiB |
+| `empty-inline-array-control` | 0.193 s | 0.039 s | 46.1 MiB |
+| `small-scalar-control` | 0.145 s | 0.040 s | 46.9 MiB |
+
+The deterministic dimensions and work observations match PS01, PS03 and PS06.
+Cleanup therefore preserves the accepted representation result: every D01/D02
+witness remains more than 5x faster than baseline, the worst wall time remains
+below 30 seconds, the worst baseline RSS remains reduced by more than 50%, and
+both controls remain faster than baseline.
