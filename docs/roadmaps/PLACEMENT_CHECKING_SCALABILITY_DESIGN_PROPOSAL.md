@@ -1,11 +1,13 @@
 # Placement Checking Scalability Design Proposal
 
-Status: draft for review, 2026-09-20. Source assessment: `0ec22432`, after
-complete private low-level lowering parity. Parent:
+Status: accepted, frozen and promoted, 2026-09-20. Accepted after review of the
+draft committed as `b3b109c7`. Implementation:
+[Placement Checking Scalability Roadmap](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md).
+Source assessment: `0ec22432`, after complete private low-level lowering parity. Parent:
 [Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Promoted inputs: [complete lowering migration discoveries D01 and D02](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DISCOVERIES.md).
-If accepted, freeze this proposal and create one focused implementation roadmap
-before starting LA05 architecture consolidation and adoption.
+Implement this focused correction before starting LA05 architecture
+consolidation and adoption.
 
 ## Purpose and completion boundary
 
@@ -323,9 +325,9 @@ broader foundation cost comparison and production adoption.
 | Parallelize the checker or add more test threads | Rejected: current witnesses already contend for CPU and memory; this does not reduce work |
 | Use a general third-party bitset/dataflow framework | Not selected: the lattice and transition semantics are small and placement-specific; reconsider only with a concrete maintained dependency benefit |
 
-## Decisions and review questions
+## Accepted decisions
 
-| Question | Proposed decision |
+| Question | Decision |
 | --- | --- |
 | Are D01 and D02 separate implementations? | No. They are separate witnesses for one shared placement-checking scalability effort. |
 | May convergence order change? | Yes, after round-oracle equivalence proves the same greatest fixed point; strict replay order remains unchanged. |
@@ -335,8 +337,8 @@ broader foundation cost comparison and production adoption.
 | Is CFG compaction included? | No. It requires an explicit amendment if checker-local changes miss the checkpoint. |
 | Does completion clear LA05 cost acceptance? | It clears D01/D02 only. LA05 still owns full-foundation comparison and adoption. |
 
-Review should focus on whether the semantic-equivalence proof and performance
-thresholds are strong enough to amend the frozen deterministic-round contract.
-After acceptance, the implementation roadmap should divide measurement,
-compact state/indices, deterministic worklist conversion, witness validation,
-and cumulative cleanup into separate reviewable tasks.
+Acceptance freezes the semantic-equivalence proof and performance thresholds as
+the conditions for amending the deterministic-round contract. The implementation
+roadmap divides measurement, compact state/indices, deterministic worklist
+conversion, witness validation and cumulative cleanup into separate reviewable
+tasks.

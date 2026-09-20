@@ -4,10 +4,11 @@ Items here are intentionally outside the active PR-sized task that exposed
 them. LM18 confirmed both on the complete private pipeline; cumulative review
 should bound and assign them without weakening semantic expansion.
 
-Both findings are promoted into the draft
+Both findings are promoted into the accepted, frozen
 [Placement Checking Scalability Design Proposal](PLACEMENT_CHECKING_SCALABILITY_DESIGN_PROPOSAL.md).
-They remain open as separate acceptance witnesses until that design is accepted,
-implemented and measured.
+Its [implementation roadmap](PLACEMENT_CHECKING_SCALABILITY_ROADMAP.md) keeps
+them open as separate acceptance witnesses until implementation and measurement
+are complete.
 
 ## D01 — Branch-heavy recursive optionals amplify baseline placement cost
 
