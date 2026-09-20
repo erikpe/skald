@@ -1,7 +1,7 @@
 # Placement Checking Scalability Roadmap
 
-Status: active; PS01 through PS05 are complete, PS04 and PS05 were skipped at
-their measured stop conditions, and PS06 is next.
+Status: active; PS01 through PS06 are complete, PS04 and PS05 were skipped at
+their measured stop conditions, and PS07 cumulative closure is next.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
 Implementation baseline: `9eafca80`, the committed roadmap revision immediately
 before PS01 changed code or measurement support.
@@ -70,7 +70,7 @@ accepting a timing-dependent result.
 - [x] PS03 — Replace tree-set lattice states with compact finite bitsets
 - [x] PS04 — Skip immutable relation indices at the compact-state checkpoint
 - [x] PS05 — Skip the worklist at the schedule checkpoint
-- [ ] PS06 — Pass the optional/array performance acceptance checkpoint
+- [x] PS06 — Pass the optional/array performance acceptance checkpoint
 - [ ] PS07 — Cumulative review, artifact cleanup and closure
 
 ## PR-sized implementation sequence
@@ -283,27 +283,43 @@ current consumer.
 **Purpose:** decide the focused effort using the retained production-path
 witnesses rather than inferred algorithmic improvement.
 
-- [ ] Run repeated isolated measurements for all six witnesses and the controls
+- [x] Run repeated isolated measurements for all six witnesses and the controls
   from the same host/profile protocol as PS01.
-- [ ] Demonstrate at least a 5x median elapsed improvement for every witness,
+- [x] Demonstrate at least a 5x median elapsed improvement for every witness,
   with the worst witness below 30 seconds.
-- [ ] Demonstrate a median cached `cargo test --locked --workspace` below
+- [x] Demonstrate a median cached `cargo test --locked --workspace` below
   90 seconds on the baseline host and at least 50% lower peak RSS for the worst
   witness.
-- [ ] Confirm representative small placements do not regress by more than 20%
+- [x] Confirm representative small placements do not regress by more than 20%
   beyond recorded measurement noise.
-- [ ] Run every placement correctness/equivalence test and confirm the six
+- [x] Run every placement correctness/equivalence test and confirm the six
   witnesses remain ordinary, enabled tests with unchanged source semantics.
-- [ ] Update the development measurement note with raw-report locations,
+- [x] Update the development measurement note with raw-report locations,
   before/after summaries and the D01/D02 decision.
-- [ ] If either discovery misses its threshold, stop before closure, retain only
-  justified improvements and amend the design; do not reclassify the tests.
+- [x] Confirm both discoveries pass; no design amendment, test reclassification
+  or rollback is required. If either had missed, the roadmap would have stopped
+  before closure and retained only independently justified improvements rather
+  than weakening the tests.
 
 **Tests:** measurement-support tests, exact witness tests, complete placement and
 native pilot suites, cached workspace repetitions, `make check`.
 
 **Exit criteria:** all correctness gates pass, every quantitative threshold is
 met for both discovery shapes, and D01/D02 have objective closure evidence.
+
+**Completed:** the committed `c3978118` state was measured with the original
+two-repeat, zero-warm-up protocol. D01 improved by 19.3x and every D02 witness by
+45.5x--119.9x; the worst wall median is 2.42 seconds. The former worst-memory
+witness fell from 891.8 MiB to 51.1 MiB. The controls improved by 4.4x and 6.2x,
+so no representative small case regressed.
+
+Two complete cached workspace runs passed in 52.14 and 52.73 seconds, for a
+52.44-second median. `make check` passed static checks, the complete workspace
+and placement/oracle suites, runtime tests and 650 golden cases. The six
+witnesses remain ordinary enabled `#[test]` functions with unchanged source
+semantics. The raw report and full before/after decision are recorded in
+[Placement Checking Performance](../development/PLACEMENT_CHECKING_PERFORMANCE.md).
+D01 and D02 both pass PS06 and are ready for formal closure during PS07.
 
 ### PS07 — Cumulative review, artifact cleanup and closure
 
@@ -350,8 +366,8 @@ closed, and LA05 receives one maintained scalable baseline checker.
 | `observe_round_solver` and independent stable replay | PS02, `8957e382` | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
 | `tests/equivalence.rs` generated solver-equivalence cases | PS02, `8957e382` | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
 | `TokenLayout`, `BitMatrix` and compact `State` | PS03, `24029bcc` | Retain | Production representation; deterministic layout, canonical final-word masking, checked dimensions and semantic-only callers |
-| Immutable relation indices | PS04 checkpoint, not introduced | Skipped | No relation had a material measured cost after compact state; direct target/draft queries remain authoritative |
-| Deterministic worklist | PS05 checkpoint, not introduced | Skipped | Accepted performance already met; deterministic-round production and its living contract remain unchanged |
+| Immutable relation indices | PS04 checkpoint, `c3978118`; not introduced | Skipped | No relation had a material measured cost after compact state; direct target/draft queries remain authoritative |
+| Deterministic worklist | PS05 checkpoint, `c3978118`; not introduced | Skipped | Accepted performance already met; deterministic-round production and its living contract remain unchanged |
 
 Update this ledger as commits introduce concrete symbols. Record the introducing
 task and commit, removal task and final disposition. New discoveries that do not

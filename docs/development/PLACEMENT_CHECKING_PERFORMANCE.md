@@ -119,8 +119,8 @@ The compact representation by itself clears the accepted per-witness goals:
 every discovery witness improves by more than 5x, the worst wall median is well
 below 30 seconds, and the worst baseline RSS falls by more than 50%. Controls
 also improve rather than regress. A cached `make compiler-test` completed in
-50.30 seconds after this change; the roadmap's final cached workspace and
-`make check` acceptance measurements remain owned by PS06.
+50.30 seconds after this change; the final cached workspace and `make check`
+acceptance measurements are recorded under PS06 below.
 
 No immutable relation has a demonstrated material cost at this checkpoint.
 Although round visits remain structurally unchanged, absolute witness time is
@@ -140,5 +140,40 @@ observable, but placement checking takes only 0.58--1.41 seconds across the D01
 and D02 witnesses and all accepted witness and memory thresholds already pass.
 A worklist would therefore change convergence control flow without a current
 performance requirement. The living placement contract and test-only round
-oracle remain unchanged for PS07 review. PS06 is the next checkpoint and owns
-the repeated full acceptance measurements and repository gates.
+oracle remain unchanged for PS07 review. PS06 subsequently ran the repeated
+full acceptance measurements and repository gates below.
+
+## PS06 acceptance checkpoint
+
+The acceptance run used the clean committed revision `c3978118`, the same host
+and unoptimized Cargo test profile as PS01, zero warm-ups and two alternating
+repetitions. The retained raw report is
+`build/measurements/placement-checking/run-d2qhw974/report.json`.
+
+| Witness | PS01 wall | PS06 wall | Improvement | PS06 check | PS06 peak RSS | RSS reduction |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `recursive-optionals` | 46.59 s | 2.419 s | 19.3x | 1.378 s | 48.4 MiB | 59.0% |
+| `primitive-array-allocation` | 39.93 s | 0.878 s | 45.5x | 0.585 s | 47.6 MiB | 78.9% |
+| `array-element-lifecycle` | 194.85 s | 1.626 s | 119.9x | 1.422 s | 51.1 MiB | 94.3% |
+| `indexed-arrays-and-aliases` | 88.07 s | 1.084 s | 81.3x | 0.878 s | 50.4 MiB | 92.1% |
+| `copied-array-slices` | 90.69 s | 1.025 s | 88.5x | 0.839 s | 49.6 MiB | 91.0% |
+| `primitive-slice-assignment` | 117.77 s | 1.276 s | 92.3x | 1.084 s | 50.6 MiB | 93.4% |
+| `empty-inline-array-control` | 0.80 s | 0.183 s | 4.4x | 0.039 s | 46.1 MiB | 24.7% |
+| `small-scalar-control` | 0.86 s | 0.139 s | 6.2x | 0.040 s | 46.9 MiB | 29.1% |
+
+Two complete cached `cargo test --locked --workspace` samples passed in 52.14
+and 52.73 seconds, producing a 52.44-second median. The six discovery witnesses
+remain ordinary enabled tests, and `make check` passed the complete workspace,
+placement/oracle, runtime and 650-case golden suites.
+
+The PS06 decision is **pass for D01 and D02 independently**:
+
+- D01 exceeds the 5x requirement, is below 30 seconds and reduces RSS by 59.0%.
+- Every D02 witness exceeds the 5x requirement; the former worst witness is
+  below 2 seconds and reduces RSS by 94.3%.
+- The cached workspace median is below 90 seconds.
+- Both small controls improve substantially, so the 20% regression guard passes.
+- Correctness, deterministic diagnostics and native execution remain unchanged.
+
+No fallback, test reclassification or design amendment is needed. PS07 may
+close the two discovery records after its cumulative artifact and diff review.
