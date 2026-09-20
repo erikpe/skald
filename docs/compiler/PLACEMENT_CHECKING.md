@@ -10,7 +10,11 @@ native pipeline; production adoption remains planned.
 Drafts never authorize code generation.
 
 The test-only specification oracle remains separate from the production checker.
-Neither relies on a producer's availability map or success flag.
+Neither relies on a producer's availability map or success flag. Focused
+checker tests also compare production convergence with an independently written
+deterministic-round scheduler over the same validated transition semantics.
+They compare a canonical block-entry fixed-point view and complete strict
+failure data; the comparison exposes no mutable state or checked authority.
 
 ## Coordinates and storage
 
@@ -145,6 +149,12 @@ parameters receiving the same argument. An empty set means unknown, not zero.
 The top set is all identities, used only to initialize reachable nonentry blocks
 for fixed-point iteration; it is never evidence before convergence. Location/type
 legality is checked separately. Semantic memory contents are not in this lattice.
+
+The state representation is private behind location-indexed empty/top,
+membership, capture, clear, replace, insertion, forgetting and intersection
+operations. Transfer semantics do not inspect its storage. This boundary lets
+representation changes retain the same writes, kills, epochs, aliases and
+strict replay contract.
 
 Writes conservatively clear every overlapping location before establishing the
 new complete contents. Resource overlap comes from units, not bank membership or

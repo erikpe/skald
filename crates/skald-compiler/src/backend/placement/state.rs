@@ -4,17 +4,46 @@ use crate::backend::selected::{AbiArea, BankKind, Payload, Representation, Repre
 use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct State(pub Vec<BTreeSet<TransferValue>>);
+pub(super) struct State {
+    contents: Vec<BTreeSet<TransferValue>>,
+}
 impl State {
     pub fn empty(locations: usize) -> Self {
-        Self(vec![BTreeSet::new(); locations])
+        Self {
+            contents: vec![BTreeSet::new(); locations],
+        }
     }
     pub fn top(locations: usize, tokens: &[TransferValue]) -> Self {
-        Self(vec![tokens.iter().copied().collect(); locations])
+        Self {
+            contents: vec![tokens.iter().copied().collect(); locations],
+        }
+    }
+    pub fn contains(&self, location: usize, token: TransferValue) -> bool {
+        self.contents[location].contains(&token)
+    }
+    pub fn capture(
+        &self,
+        location: usize,
+        mut include: impl FnMut(TransferValue) -> bool,
+    ) -> BTreeSet<TransferValue> {
+        self.contents[location]
+            .iter()
+            .copied()
+            .filter(|&token| include(token))
+            .collect()
+    }
+    pub fn clear(&mut self, location: usize) {
+        self.contents[location].clear();
+    }
+    pub fn replace(&mut self, location: usize, tokens: BTreeSet<TransferValue>) {
+        self.contents[location] = tokens;
+    }
+    pub fn insert(&mut self, location: usize, token: TransferValue) {
+        self.contents[location].insert(token);
     }
     pub fn intersect(&mut self, other: &Self) -> usize {
         let mut removed = 0;
-        for (left, right) in self.0.iter_mut().zip(&other.0) {
+        for (left, right) in self.contents.iter_mut().zip(&other.contents) {
             let before = left.len();
             left.retain(|token| right.contains(token));
             removed += before - left.len();
@@ -22,9 +51,17 @@ impl State {
         removed
     }
     pub fn forget(&mut self, token: TransferValue) {
-        for contents in &mut self.0 {
+        for contents in &mut self.contents {
             contents.remove(&token);
         }
+    }
+
+    #[cfg(test)]
+    pub fn canonical(&self) -> Vec<Vec<TransferValue>> {
+        self.contents
+            .iter()
+            .map(|contents| contents.iter().copied().collect())
+            .collect()
     }
 }
 impl<P: Payload> Requirements<'_, P> {
@@ -52,15 +89,16 @@ impl<P: Payload> Requirements<'_, P> {
             _ => a == b,
         }
     }
-    pub fn contents<'a>(
-        &self,
-        state: &'a State,
-        location: Location,
-    ) -> &'a BTreeSet<TransferValue> {
-        &state.0[self.index(location)]
-    }
     pub fn has(&self, state: &State, location: Location, token: TransferValue) -> bool {
-        self.contents(state, location).contains(&token)
+        state.contains(self.index(location), token)
+    }
+    pub fn capture(
+        &self,
+        state: &State,
+        location: Location,
+        include: impl FnMut(TransferValue) -> bool,
+    ) -> BTreeSet<TransferValue> {
+        state.capture(self.index(location), include)
     }
     pub fn write(
         &self,
@@ -71,10 +109,10 @@ impl<P: Payload> Requirements<'_, P> {
     ) {
         for (index, &other) in self.locations.iter().enumerate() {
             if self.aliases(draft, location, other) {
-                state.0[index].clear();
+                state.clear(index);
             }
         }
-        state.0[self.index(location)] = tokens;
+        state.replace(self.index(location), tokens);
     }
     pub fn kill_unit(
         &self,
@@ -85,7 +123,7 @@ impl<P: Payload> Requirements<'_, P> {
         for (index, location) in self.locations.iter().enumerate() {
             if matches!(location, Location::Resource(view) if draft.selected.draft().context().resources.view_units(*view).expect("checked view").contains(&unit))
             {
-                state.0[index].clear();
+                state.clear(index);
             }
         }
     }
@@ -97,7 +135,7 @@ impl<P: Payload> Requirements<'_, P> {
     ) {
         for (index, storage) in draft.storage.iter().enumerate() {
             if storage.lifetime == StorageLifetime::Transfer(point) {
-                state.0[self.index(Location::Storage(StorageId(index)))].clear();
+                state.clear(self.index(Location::Storage(StorageId(index))));
             }
         }
     }
@@ -150,16 +188,12 @@ impl<P: Payload> Requirements<'_, P> {
                     ));
                 }
                 let captured = if available {
-                    self.contents(state, transfer.source)
-                        .iter()
-                        .copied()
-                        .filter(|&token| {
-                            transfer_compatible(
-                                self.token_representation(draft, token),
-                                transfer.source_representation,
-                            )
-                        })
-                        .collect()
+                    self.capture(state, transfer.source, |token| {
+                        transfer_compatible(
+                            self.token_representation(draft, token),
+                            transfer.source_representation,
+                        )
+                    })
                 } else {
                     BTreeSet::new()
                 };
@@ -188,11 +222,11 @@ impl<P: Payload> Requirements<'_, P> {
                 }
             }
             let index = self.index(location);
-            self.seed.0[index].insert(TransferValue::Selected(value));
+            self.seed.insert(index, TransferValue::Selected(value));
         }
         for &view in &self.preserved {
             let index = self.index(Location::Resource(view));
-            self.seed.0[index].insert(TransferValue::Preserved(view));
+            self.seed.insert(index, TransferValue::Preserved(view));
         }
         let mut seed = self.seed.clone();
         self.transfers(draft, &mut seed, TransferPoint::Entry, true)?;
@@ -208,7 +242,7 @@ impl<P: Payload> Requirements<'_, P> {
                     ..
                 }
             ) {
-                state.0[index].clear();
+                state.clear(index);
             }
         }
     }

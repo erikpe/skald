@@ -38,7 +38,7 @@ fn second_target_preserves_only_promised_width_and_restores_link_register() {
             operand(&mut draft, entry, 0, 0, view);
             operand(&mut draft, entry, 2, 0, view);
             save_promises(&mut draft, target, entry.id());
-            let checked = check_placement(draft, target);
+            let checked = check_with_round_oracle(draft, target);
             if wide {
                 reject(checked, CheckReason::MissingValue);
             } else {
@@ -148,7 +148,7 @@ fn mixed_bank_cycles_need_a_real_typed_temporary() {
                     float(),
                 ),
             );
-            let checked = check_placement(draft, target);
+            let checked = check_with_round_oracle(draft, target);
             if saved {
                 assert!(checked.is_ok(), "{:?}", checked.err());
             } else {
@@ -173,7 +173,7 @@ fn saved_original_contents_and_transfer_lifetimes_are_independent_obligations() 
             if saved {
                 save_promises(&mut draft, target, entry.id());
             }
-            let result = check_placement(draft, target);
+            let result = check_with_round_oracle(draft, target);
             if saved {
                 assert!(result.is_ok());
             } else {
@@ -203,7 +203,10 @@ fn saved_original_contents_and_transfer_lifetimes_are_independent_obligations() 
                 Location::Storage(temp),
             ),
         );
-        reject(check_placement(draft, target), CheckReason::Lifetime);
+        reject(
+            check_with_round_oracle(draft, target),
+            CheckReason::Lifetime,
+        );
     });
 }
 
@@ -265,7 +268,7 @@ fn signature_keys_do_not_make_overlapping_abi_slots_disjoint() {
                 point,
                 copy(v.id(), bits(), slot, Location::Resource(target.ints[2])),
             );
-            let result = check_placement(draft, target);
+            let result = check_with_round_oracle(draft, target);
             if index == 0 {
                 reject(result, CheckReason::MissingValue);
             } else {
@@ -307,7 +310,7 @@ fn original_preserved_bits_can_be_saved_and_restored_through_another_bank() {
                 transfer.kind = kind;
                 draft.transfer(TransferPoint::Before(Site::Terminal(entry.id())), transfer);
             }
-            let result = check_placement(draft, target);
+            let result = check_with_round_oracle(draft, target);
             match restore {
                 None => reject(result, CheckReason::Preservation),
                 Some(TransferKind::Copy) => assert!(matches!(

@@ -12,6 +12,21 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(in crate::backend) struct CheckedPlacement<'s, 'p, P> {
     draft: PlacementDraft<'s, 'p, P>,
 }
+
+#[cfg(test)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct FixedPointDigest {
+    locations: Vec<Location>,
+    tokens: Vec<TransferValue>,
+    blocks: Vec<(SelectedBlockId, Vec<Vec<TransferValue>>)>,
+}
+
+#[cfg(test)]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(super) struct SolverObservation {
+    pub fixed_point: Option<FixedPointDigest>,
+    pub outcome: Result<(), CheckFailure>,
+}
 impl<'s, 'p, P> CheckedPlacement<'s, 'p, P> {
     pub(in crate::backend) fn assignments(
         &self,
@@ -207,7 +222,7 @@ impl<P: Payload> Requirements<'_, P> {
         }
         Ok(())
     }
-    fn block(
+    pub(super) fn block(
         &self,
         draft: &PlacementDraft<'_, '_, P>,
         state: &mut State,
@@ -232,7 +247,7 @@ impl<P: Payload> Requirements<'_, P> {
             strict,
         )
     }
-    fn edge(
+    pub(super) fn edge(
         &self,
         draft: &PlacementDraft<'_, '_, P>,
         state: &mut State,
@@ -255,7 +270,7 @@ impl<P: Payload> Requirements<'_, P> {
                 return Err(self.failure(location, CheckReason::MissingValue));
             }
             captures.push(if available {
-                self.contents(state, source).clone()
+                self.capture(state, source, |_| true)
             } else {
                 BTreeSet::new()
             });
@@ -308,8 +323,17 @@ impl<P: Payload> Requirements<'_, P> {
     fn solve(
         &self,
         draft: &PlacementDraft<'_, '_, P>,
-        mut metrics: Option<&mut PlacementCheckMetrics>,
+        metrics: Option<&mut PlacementCheckMetrics>,
     ) -> Result<(), CheckFailure> {
+        let states = self.converge(draft, metrics)?;
+        self.replay(draft, &states)
+    }
+
+    fn converge(
+        &self,
+        draft: &PlacementDraft<'_, '_, P>,
+        mut metrics: Option<&mut PlacementCheckMetrics>,
+    ) -> Result<BTreeMap<SelectedBlockId, State>, CheckFailure> {
         let mut reachable = BTreeSet::from([self.entry]);
         let mut pending = vec![self.entry];
         while let Some(block) = pending.pop() {
@@ -369,23 +393,57 @@ impl<P: Payload> Requirements<'_, P> {
                 }
             }
             if next == states {
-                for &block in &reachable {
-                    let mut output = states[&block].clone();
-                    self.block(draft, &mut output, block, true)?;
-                    for slot in 0..self.blocks[&block].edges.len() {
-                        let mut outgoing = output.clone();
-                        self.edge(draft, &mut outgoing, block, slot, true)?;
-                    }
-                }
-                return Ok(());
+                return Ok(states);
             }
             states = next;
         }
         Err(self.failure(CheckLocation::Entry, CheckReason::Convergence))
     }
+
+    fn replay(
+        &self,
+        draft: &PlacementDraft<'_, '_, P>,
+        states: &BTreeMap<SelectedBlockId, State>,
+    ) -> Result<(), CheckFailure> {
+        for (&block, state) in states {
+            let mut output = state.clone();
+            self.block(draft, &mut output, block, true)?;
+            for slot in 0..self.blocks[&block].edges.len() {
+                let mut outgoing = output.clone();
+                self.edge(draft, &mut outgoing, block, slot, true)?;
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(super) fn observe_solver(&self, draft: &PlacementDraft<'_, '_, P>) -> SolverObservation {
+        match self.converge(draft, None) {
+            Ok(states) => SolverObservation {
+                fixed_point: Some(self.digest(&states)),
+                outcome: self.replay(draft, &states),
+            },
+            Err(failure) => SolverObservation {
+                fixed_point: None,
+                outcome: Err(failure),
+            },
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn digest(&self, states: &BTreeMap<SelectedBlockId, State>) -> FixedPointDigest {
+        FixedPointDigest {
+            locations: self.locations.clone(),
+            tokens: self.tokens.clone(),
+            blocks: states
+                .iter()
+                .map(|(&block, state)| (block, state.canonical()))
+                .collect(),
+        }
+    }
 }
 
-fn iteration_bound(blocks: usize, locations: usize, tokens: usize) -> Option<usize> {
+pub(super) fn iteration_bound(blocks: usize, locations: usize, tokens: usize) -> Option<usize> {
     blocks
         .checked_mul(locations)?
         .checked_mul(tokens)?

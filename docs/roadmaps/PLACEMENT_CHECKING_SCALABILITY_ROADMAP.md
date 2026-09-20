@@ -1,6 +1,6 @@
 # Placement Checking Scalability Roadmap
 
-Status: active; PS01 is complete and PS02 is next.
+Status: active; PS01 and PS02 are complete, and PS03 is next.
 Planning baseline: `b3b109c7`, the committed design draft accepted by the user.
 Implementation baseline: `9eafca80`, the committed roadmap revision immediately
 before PS01 changed code or measurement support.
@@ -65,7 +65,7 @@ accepting a timing-dependent result.
 ## Progress
 
 - [x] PS01 — Establish placement phase measurements and pass the diagnosis checkpoint
-- [ ] PS02 — Establish fixed-point equivalence evidence and migration scaffolding
+- [x] PS02 — Establish fixed-point equivalence evidence and migration scaffolding
 - [ ] PS03 — Replace tree-set lattice states with compact finite bitsets
 - [ ] PS04 — Precompute measured immutable placement relations
 - [ ] PS05 — Replace full convergence rounds with a deterministic worklist
@@ -121,21 +121,21 @@ proceed without amending the accepted design.
 **Purpose:** make the forthcoming representation and schedule changes
 independently reviewable against the accepted round semantics.
 
-- [ ] Extend the existing owner-local placement specification oracle to model
+- [x] Extend the existing owner-local placement specification oracle to model
   the accepted deterministic-round join and strict replay cases needed for
   solver comparison; do not import production solver control flow.
-- [ ] Add a test-only canonical fixed-point digest or equivalent comparison view
+- [x] Add a test-only canonical fixed-point digest or equivalent comparison view
   without exposing mutable state or widening `CheckedPlacement` authority.
-- [ ] Compare production and oracle acceptance, converged state, first strict
+- [x] Compare production and oracle acceptance, converged state, first strict
   failure location/reason/origin and capacity disposition on the maintained
   loop, entry-backedge, duplicate-edge, epoch, call, alias, preservation,
   scratch and unreachable counterexamples.
-- [ ] Add bounded deterministic generation of small selected graphs and manual
+- [x] Add bounded deterministic generation of small selected graphs and manual
   placements, including empty-token and first-propagation-top cases.
-- [ ] Isolate production state operations behind a small cohesive private
+- [x] Isolate production state operations behind a small cohesive private
   interface so PS03 can change representation without changing transfer
   semantics.
-- [ ] Record the round oracle, digest and generated comparison runner in the
+- [x] Record the round oracle, digest and generated comparison runner in the
   artifact ledger with PS07 disposition.
 
 **Tests:** all placement owner tests; generated equivalence cases with fixed
@@ -145,6 +145,17 @@ failure selection; `make compiler-test`.
 **Exit criteria:** the current production round solver and independent oracle
 agree on the complete comparison corpus, state representation is privately
 encapsulated, and no testing seam is reachable from ordinary compilation.
+
+**Completed:** focused hand-written placements now run production convergence
+and an independently written Jacobi scheduler over the same validated
+transition semantics. They compare canonical block-entry states and the full
+strict failure, including location, reason and origin. The
+corpus covers loops and entry backedges, duplicate edges, epochs, calls, ABI
+aliases, preservation, scratch lifetime and unreachable code on both target
+profiles. Thirty-two bounded generated selected diamonds cover accepted and
+rejected joins twice, an empty-token graph covers first propagation when top
+equals the entry state, and checked dimension cases compare capacity
+disposition. The ordinary checker exposes no comparison API.
 
 ### PS03 — Replace tree-set lattice states with compact finite bitsets
 
@@ -301,11 +312,11 @@ closed, and LA05 receives one maintained scalable baseline checker.
 
 | Artifact | Introduced | Intended disposition | Retention criterion |
 | --- | --- | --- | --- |
-| `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, commit pending | Review and narrow/remove in PS07 | Retain only if the test-only interface remains deterministic, has no ordinary-compilation output and is used by LA05 measurement |
-| `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, commit pending | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
-| Canonical fixed-point digest/comparison view | PS02 | Remove or keep test-only in PS07 | Retain only if it materially protects solver equivalence without exposing authority or adding material suite cost |
-| Extended deterministic-round oracle | PS02 | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
-| Generated solver-equivalence cases | PS02 | Prefer permanent bounded tests | Fixed seeds, stable size bound, independent semantics and low ordinary-suite cost |
+| `compile_native_pilot_profiled`, `NativePilotProfile`, profiled lowering/placement/native-execution helpers and `PlacementCheckMetrics` | PS01, `974ecb20` | Review and narrow/remove in PS07 | Retain only if the test-only interface remains deterministic, has no ordinary-compilation output and is used by LA05 measurement |
+| `scripts/measure_placement_checking.py`, its focused tests, Make target and `PLACEMENT_CHECKING_PERFORMANCE.md` | PS01, `974ecb20` | Retain through LA05 | Reproducible reports, ignored generated artifacts and maintained witness identifiers |
+| `FixedPointDigest`, `SolverObservation` and `check_with_round_oracle` | PS02, commit pending | Remove or keep test-only in PS07 | Retain only if they materially protect solver equivalence without exposing authority or adding material suite cost |
+| `observe_round_solver` and independent stable replay | PS02, commit pending | Reconcile in PS07 | Retain as independent specification coverage only if bounded ordinary tests remain fast; never compile into production |
+| `tests/equivalence.rs` generated solver-equivalence cases | PS02, commit pending | Prefer permanent bounded tests | Fixed sizes, deterministic inputs, genuine selected graphs and low ordinary-suite cost |
 | Direct relation paths superseded by immutable indices | PS04 | Remove with each accepted index | Keep only a test oracle where it provides independent equivalence evidence |
 | Full-round production solver superseded by worklist | PS05 | Remove in PS05 after equivalence | A test-only round oracle may remain under the separate oracle criterion; no production alternative |
 
