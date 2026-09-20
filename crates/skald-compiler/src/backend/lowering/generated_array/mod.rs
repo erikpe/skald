@@ -12,19 +12,19 @@ use crate::backend::{
         ArtifactId, CallableBinding, ComponentRole, HelperFamily, HelperKey, LirCallableId,
         PlanError, PlanView, RuntimeService, ScalarType,
     },
-    planning::AdmittedProgram,
+    planning::PlannedProgram,
 };
 use crate::primitive_comparison::PrimitiveComparisonPredicate;
 
 pub(super) fn lower<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     key: HelperKey,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     if key.family == HelperFamily::RawClassCopy {
-        return lifecycle::raw_class_copy(admitted, owner, key.layout);
+        return lifecycle::raw_class_copy(planned, owner, key.layout);
     }
     let candidates = plan
         .semantic()
@@ -36,12 +36,12 @@ pub(super) fn lower<'plan>(
         return Err(PlanError::InvalidDomain.into());
     };
     match key.family {
-        HelperFamily::ArrayElementInitializer => lifecycle::initializer(admitted, owner, array),
-        HelperFamily::ArrayElementCopier => lifecycle::copier(admitted, owner, array),
+        HelperFamily::ArrayElementInitializer => lifecycle::initializer(planned, owner, array),
+        HelperFamily::ArrayElementCopier => lifecycle::copier(planned, owner, array),
         HelperFamily::ArrayClone => clone_array(plan, owner, array),
         HelperFamily::ArraySliceClone => clone_array_slice(plan, owner, array),
         HelperFamily::ArrayPrimitiveSliceAssign => primitive_slice_assign(plan, owner, array),
-        HelperFamily::ArrayElementDestroyer => lifecycle::destroyer(admitted, owner, array),
+        HelperFamily::ArrayElementDestroyer => lifecycle::destroyer(planned, owner, array),
         HelperFamily::ArrayRelease => release(plan, owner, array),
         HelperFamily::ArraySharedFinalizer => shared_finalizer(plan, owner, array),
         _ => Err(PlanError::InvalidDomain.into()),

@@ -72,7 +72,7 @@ pub(in crate::backend) struct VerifiedAssembly {
 }
 
 impl<'p> PhysicalProgramBuilder<'p, TempFragmentStore> {
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub(in crate::backend) fn temporary(
         context: &'p SelectionContext<'p>,
     ) -> Result<Self, ProgramError> {

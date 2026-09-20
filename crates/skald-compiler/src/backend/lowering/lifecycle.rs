@@ -93,7 +93,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirSelectedCopyOperation::Synthesized(class) => class,
         };
         let capability = self
-            .admitted
+            .planned
             .program()
             .class(class)
             .ok_or(PlanError::UnknownDeclaration)?
@@ -149,7 +149,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirSelectedCopyOperation::Synthesized(class) => class,
         };
         let capability = self
-            .admitted
+            .planned
             .program()
             .class(class)
             .ok_or(PlanError::UnknownDeclaration)?
@@ -240,7 +240,7 @@ impl<'plan> Lowerer<'plan, '_> {
             } => self.class_optional_initialize(
                 block,
                 &crate::mir::MirClassOptionalInitialize {
-                    optional: optional_field(self.admitted.program(), field)?,
+                    optional: optional_field(self.planned.program(), field)?,
                     destination: destination.clone().project_field(field),
                     source: crate::mir::MirClassOptionalSource::Copy(
                         source.clone().project_field(field),
@@ -318,7 +318,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 operation,
             } => {
                 let constructor = self
-                    .admitted
+                    .planned
                     .program()
                     .class(class)
                     .and_then(|class| class.copy_constructor.selected())
@@ -326,7 +326,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 self.class_optional_assign(
                     block,
                     &crate::mir::MirClassOptionalAssign {
-                        optional: optional_field(self.admitted.program(), field)?,
+                        optional: optional_field(self.planned.program(), field)?,
                         destination: destination.clone().project_field(field),
                         source: crate::mir::MirClassOptionalSource::Copy(
                             source.clone().project_field(field),

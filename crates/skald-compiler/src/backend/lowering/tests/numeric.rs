@@ -6,7 +6,7 @@ use crate::{
         lir::*,
         lowering::{lower_next, lower_program},
         plan::*,
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -62,9 +62,9 @@ fn numeric_boundary_cases_execute_the_verified_lowered_graph() {
             "fn kernel() -> {ty} {{ return {expression}; }} fn main() -> i64 {{ return 0; }}"
         );
         let fixture = lower_source_to_complete_final_mir_with_sources("numeric.ska", &source);
-        let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-        let mut worklist = ProgramBuilder::new(admitted.plan().view());
-        let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+        let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+        let mut worklist = ProgramBuilder::new(planned.plan().view());
+        let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
         assert_eq!(oracle::run(&body), expected, "{expression}");
         assert!(body.receipt().matches(&body));
     }
@@ -121,9 +121,9 @@ fn complete_primitive_cast_matrix_publishes_the_expected_conversion_cells() {
         for (to, target) in names.iter().enumerate() {
             let source = format!("fn convert(value: {source}) -> {target} {{ return ({target}) value; }} fn main() -> i64 {{ return 0; }}");
             let fixture = lower_source_to_complete_final_mir_with_sources("casts.ska", &source);
-            let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-            let mut worklist = ProgramBuilder::new(admitted.plan().view());
-            let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+            let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+            let mut worklist = ProgramBuilder::new(planned.plan().view());
+            let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
             let conversions = body
                 .draft()
                 .blocks()
@@ -168,9 +168,9 @@ fn numeric_failures_preserve_exact_reporting_data_effects_and_source_origins() {
         "failure.ska",
         "fn kernel(a: i64, b: i64) -> i64 { return a / b; } fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
     let (_, block) = body
         .draft()
         .blocks()
@@ -208,10 +208,10 @@ fn final_publication_rejects_forged_and_bypassed_numeric_evidence() {
         "forged.ska",
         "fn divide(a: i64, b: i64) -> i64 { return a / b; } fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let key = ProgramBuilder::new(admitted.plan().view()).next().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let key = ProgramBuilder::new(planned.plan().view()).next().unwrap();
     for (bypass, forged) in [(false, false), (true, false), (false, true)] {
-        let mut builder = DraftBuilder::new(admitted.plan().view().callable(key).unwrap()).unwrap();
+        let mut builder = DraftBuilder::new(planned.plan().view().callable(key).unwrap()).unwrap();
         let blocks = (0..3)
             .map(|_| builder.reserve_block().unwrap())
             .collect::<Vec<_>>();
@@ -340,9 +340,9 @@ fn checked_float_ranges_reject_nan_infinities_and_upper_boundaries() {
                 }
             }
             let sealed = crate::passes::verify_final_mir(program).unwrap();
-            let admitted = admit(BackendInput::without_runtime_trace(&sealed)).unwrap();
-            let mut worklist = ProgramBuilder::new(admitted.plan().view());
-            let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+            let planned = plan_program(BackendInput::without_runtime_trace(&sealed)).unwrap();
+            let mut worklist = ProgramBuilder::new(planned.plan().view());
+            let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
             assert_eq!(oracle::run(&body), expected[target], "{ty} {bits:016x}");
         }
     }
@@ -361,11 +361,12 @@ fn bit_reinterpretation_intrinsics_keep_payloads_and_need_no_range_guard() {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
     let verified = crate::passes::run_mir_pipeline(program).unwrap();
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
-            .unwrap();
+    let planned = plan_program(
+        BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only(),
+    )
+    .unwrap();
     let mut conversions = 0;
-    lower_program(&admitted, |body| {
+    lower_program(&planned, |body| {
         let normalized_intrinsic = body
             .draft()
             .blocks()
@@ -423,9 +424,9 @@ fn bit_reinterpretation_intrinsics_keep_payloads_and_need_no_range_guard() {
 #[test]
 fn guarded_numeric_values_in_loops_have_exact_single_definitions() {
     let fixture = lower_source_to_complete_final_mir_with_sources("numeric-loop.ska", "fn kernel(n: i64, count: u64, f: f64) -> i64 { var remaining: i64 = n; var result: i64 = 1; while (remaining > 0) { result = result / remaining; result = result << count; result = result + (i64) f; remaining = remaining - 1; } return result; } fn main() -> i64 { return 0; }");
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
     assert_eq!(
         body.draft()
             .blocks()

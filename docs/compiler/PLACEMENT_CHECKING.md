@@ -6,7 +6,7 @@ finite availability checking. The checker consumes a draft and publishes an
 immutable `CheckedPlacement` only after static legality, CFG convergence and
 strict replay succeed. Deterministic baseline placement and [checked frame planning](FRAME_PLANNING.md)
 feed typed physical realization and independent verification in the private
-native pilot; production adoption remains planned.
+native pipeline; production adoption remains planned.
 Drafts never authorize code generation.
 
 The test-only specification oracle remains separate from the production checker.

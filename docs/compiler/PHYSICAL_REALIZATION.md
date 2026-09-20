@@ -113,7 +113,7 @@ and cleanup failures produce errors and the temporary store removes residual
 files on drop. External linker spellings are explicit projected inputs keyed by
 typed external identities; absent or surplus entries reject before construction.
 
-The private whole-program pilot consumes this closed product after mandatory
+The private whole-program pipeline consumes this closed product after mandatory
 selection, placement, frame and physical checks. Its native execution matrix
 covers default/minimal MIR schedules, both trace policies and complete/reachable
 artifact policies; scalar C probes exercise both call directions and integer/SIMD
@@ -121,6 +121,6 @@ bank pressure. Hardening probes cover unordered floating predicates, upper-half
 unsigned conversions, signed minimum/floor division, complete-width shift checks,
 destructive live ties and values surviving caller clobbers. Requested checkpoints
 are deterministic across processes and observation failure cannot publish an
-artifact. Receiver, hidden-result and alias-origin components remain native
-phase fixtures because their source forms are deliberately outside admission.
+artifact. Target-level receiver, hidden-result and alias-origin fixtures
+supplement complete source-to-native evidence with direct ABI corruption probes.
 The ordinary backend remains unchanged until the separate adoption workstream.

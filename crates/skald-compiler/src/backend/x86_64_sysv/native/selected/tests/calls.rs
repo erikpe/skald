@@ -15,14 +15,14 @@ pub(super) fn complete(
     } else {
         BackendInput::without_runtime_trace(&fixture.mir)
     };
-    let admitted = admit(input).unwrap();
-    let catalog = TargetDeclarations::new(admitted.plan().view())
+    let planned = plan_program(input).unwrap();
+    let catalog = TargetDeclarations::new(planned.plan().view())
         .freeze()
         .unwrap();
     let context = selection_context(&catalog).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
     while worklist.next().is_some() {
-        let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+        let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
         check(&context, &body);
     }
 }
@@ -363,18 +363,18 @@ fn whole_program_selected_closure_reconciles_released_lower_bodies_under_both_tr
     let source = "extern fn foreign(a: i64) -> i64; fn invoke(f: fn(i64) -> i64, a: i64) -> i64 { return f(a); } fn identity(a: i64) -> i64 { return a; } fn main() -> i64 { return foreign(invoke(identity, 7)); }";
     for trace in [false, true] {
         let fixture = lower_source_to_complete_final_mir_with_sources("closure.ska", source);
-        let admitted = admit(if trace {
+        let planned = plan_program(if trace {
             BackendInput::with_runtime_trace(&fixture.mir, &fixture.sources)
         } else {
             BackendInput::without_runtime_trace(&fixture.mir)
         })
         .unwrap();
-        let catalog = TargetDeclarations::new(admitted.plan().view())
+        let catalog = TargetDeclarations::new(planned.plan().view())
             .freeze()
             .unwrap();
         let context = selection_context(&catalog).unwrap();
         let mut inventory = selected::SelectedProgramBuilder::new(&context);
-        let lower = crate::backend::lowering::lower_program(&admitted, |body| {
+        let lower = crate::backend::lowering::lower_program(&planned, |body| {
             let selected = select(&context, &body).unwrap();
             inventory.complete(&selected, &selected.receipt()).unwrap();
             drop(body);

@@ -3,14 +3,14 @@ use super::{super::*, NativePilotError, NativePilotInspection};
 use crate::backend::{
     lir::TargetDeclarations,
     lowering::lower_program_with,
-    planning::{admit, AdmittedProgram},
+    planning::{plan_program, PlannedProgram},
     selected::SelectedProgramBuilder,
     BackendInput,
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
-/// Compile one wholly admitted final-MIR program through every new native phase.
+/// Compile one wholly planned final-MIR program through every new native phase.
 ///
 /// This entry is deliberately compiler-private and has no legacy fallback. The
 /// production target registry continues to use the established backend.
@@ -37,28 +37,28 @@ fn compile(
     inspection: NativePilotInspection,
     out: Option<&mut dyn Write>,
 ) -> Result<String, NativePilotError> {
-    let admitted = admit(input).map_err(NativePilotError::Admission)?;
-    compile_admitted(&admitted, inspection, out)
+    let planned = plan_program(input).map_err(NativePilotError::Planning)?;
+    compile_planned(&planned, inspection, out)
 }
 
-/// Continue the private path after whole-program admission.
+/// Continue the private path after whole-program planning.
 ///
-/// Keeping this seam visible only inside the pilot makes post-admission failure
+/// Keeping this seam visible only inside the pilot makes post-planning failure
 /// tests explicit without creating a second production entry or fallback path.
-pub(super) fn compile_admitted(
-    admitted: &AdmittedProgram<'_>,
+pub(super) fn compile_planned(
+    planned: &PlannedProgram<'_>,
     inspection: NativePilotInspection,
     mut out: Option<&mut dyn Write>,
 ) -> Result<String, NativePilotError> {
-    // Exploratory receipts never certify the executable pass. The pure request
-    // rule is repeated by selection after this catalog has been frozen.
+    // Discovery receipts never certify the executable pass. Selection repeats
+    // the pure request rule after this catalog has been frozen.
     let mut requests = BTreeSet::new();
-    let exploratory = lower_program_with(admitted, |lower| {
+    let discovery_program = lower_program_with(planned, |lower| {
         requests.extend(discover_requests(&lower).map_err(NativePilotError::Selection)?);
         Ok::<(), NativePilotError>(())
     })?;
-    drop(exploratory);
-    let plan = admitted.plan().view();
+    drop(discovery_program);
+    let plan = planned.plan().view();
     for request in requests {
         let request_id = plan
             .artifact_id(request)
@@ -66,12 +66,12 @@ pub(super) fn compile_admitted(
         plan.artifact(request_id, request.category())
             .map_err(|error| NativePilotError::Discovery(error.into()))?;
     }
-    // The admitted program needs no target-local constants or thunks yet.
+    // The planned program needs no target-local constants or thunks yet.
     let catalog = TargetDeclarations::new(plan)
         .freeze()
         .map_err(NativePilotError::Discovery)?;
     let context = selection_context(&catalog).map_err(NativePilotError::Abi)?;
-    let symbols = admitted
+    let symbols = planned
         .program()
         .external_links
         .iter()
@@ -82,7 +82,7 @@ pub(super) fn compile_admitted(
         PhysicalProgramBuilder::temporary_with_external_symbols(&context, symbols)
             .map_err(NativePilotError::PhysicalProgram)?;
 
-    let lower_program = lower_program_with(admitted, |lower| {
+    let lower_program = lower_program_with(planned, |lower| {
         observe(&mut out, inspection.lowered, |out| lower.dump(out))?;
         let selected = select(&context, &lower).map_err(NativePilotError::Selection)?;
         observe(&mut out, inspection.selected, |out| selected.dump(out))?;

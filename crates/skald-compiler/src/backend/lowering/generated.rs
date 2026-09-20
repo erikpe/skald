@@ -11,7 +11,7 @@ use crate::{
             ArtifactId, CallableBinding, ComponentRole, DataKey, DestructionStepFact, HelperFamily,
             LayoutId, LirCallableId, PlanError, PlanView, ScalarType,
         },
-        planning::AdmittedProgram,
+        planning::PlannedProgram,
     },
     identity::ClassId,
 };
@@ -20,11 +20,11 @@ use crate::{
 /// own generated finalizers, so worklist reservation closes recursive helper
 /// dependencies without recursively constructing Rust bodies.
 pub(super) fn lower_class_finalizer<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     layout: LayoutId,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let classes = plan
         .semantic()
@@ -237,11 +237,11 @@ pub(super) fn lower_class_finalizer<'plan>(
 /// Emit one exact optional-box finalizer. The owner release helper passes the
 /// allocation payload, which is the first byte of the stored optional wrapper.
 pub(super) fn lower_optional_box_finalizer<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     layout: LayoutId,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let mut candidates = plan
         .semantic()

@@ -78,7 +78,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let artifact = match source.target {
             MirCallTarget::Direct(id) => {
                 let declaration = self
-                    .admitted
+                    .planned
                     .program()
                     .declarations
                     .get(id)
@@ -94,7 +94,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirCallTarget::Indirect(target) => {
                 return Ok((
                     CallTarget::Indirect(self.values[target.callee.index()]),
-                    self.admitted
+                    self.planned
                         .function_type(target.function_type)
                         .ok_or(PlanError::UnknownDeclaration)?,
                 ))

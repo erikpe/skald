@@ -1,14 +1,13 @@
 # Low-Level Compiler Migration Coverage
 
-Status: phase preparation, executable model and private LA03 pilot complete;
-the focused [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-is accepted and its [roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
-is active with the complete optional/array recursive-family checkpoint delivered,
-2026-09-19.
+Status: phase preparation, executable model and complete private native parity
+are delivered. The focused [complete lowering migration design](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+and [roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) are
+implemented and archived, 2026-09-20.
 Model cumulative review covers `f1053782..495df6b9` plus the closing static-effect
 receipt fix and payload-contract/documentation changes. Production full-language
-migration, adoption and allocation remain pending. Archived child
-roadmaps own validation history; this record owns current migration obligations.
+migration is complete; production adoption and allocation remain pending.
+Archived child roadmaps own validation history; this record owns the LA05 handoff.
 Program implementation baseline: `495debd3`.
 
 This is the continuing migration/handoff record for the
@@ -95,7 +94,7 @@ Retain the semantic expectations while adapting owners during migration.
 | E19 | [Live integers](../../tests/golden/operators/live_integer_inputs.ska), `operators/arithmetic::live_integer_inputs`; [aggregate pressure](../../tests/golden/calls/aggregate_pressure.ska), `calls/functions::aggregate_pressure`; exact variants/runs below |
 | E20 | [Strong-count native probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/count/tests.rs): `release_frees_original_header_after_finalizer_changes_owner_and_clobbers_callers` |
 | E21 | [Generated retain ABI probe](../../crates/skald-compiler/src/backend/x86_64_sysv/lower/ownership/helpers/tests.rs): `generated_retain_helper_aligns_the_stack_before_reporting_exhaustion`; demonstrated the unaligned overflow reporter call before its correction |
-| E22 | [Private native pilot](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): the two complete policy/schedule matrices; primitive/numeric/failure tests; aggregate, object, dispatch and C ABI pressure tests; class/shared/optional/box/array lifecycle tests; string/I/O/static lifecycle tests; requested-checkpoint and cross-process determinism tests. Exact matrix ownership is recorded in the private parity checkpoint below. |
+| E22 | [Private native pipeline](../../crates/skald-compiler/src/backend/x86_64_sysv/native/pilot/tests.rs): the two complete policy/schedule matrices; primitive/numeric/failure tests; aggregate, object, dispatch and C ABI pressure tests; class/shared/optional/box/array lifecycle tests; string/I/O/static lifecycle tests; requested-checkpoint and cross-process determinism tests. Exact matrix ownership is recorded in the private parity checkpoint below. |
 
 Feature-owned native/failure goldens additionally protect
 [calls](../../tests/golden/calls/functions.golden.toml),
@@ -382,7 +381,7 @@ be multiplied into one excessively slow fixture.
 | Shared owners, recursive cleanup and container lifecycle | `shared_owners_execute_allocation_transfer_fields_casts_and_finalization`, `aggregate_and_class_optional_lifecycle_executes_through_the_verified_path`, `optional_boxes_publish_access_and_finalize_through_the_verified_path`, `nontrivial_array_element_lifecycle_executes_through_generated_helpers`, `indexed_arrays_and_array_aliases_execute_through_the_verified_path`, `copied_array_slices_execute_through_the_verified_path`, `primitive_slice_assignment_executes_through_the_verified_path` |
 | String, I/O, runtime and C boundaries | `literal_strings_and_standard_io_execute_through_the_verified_path`, `standard_io_open_read_and_close_errors_execute_through_the_verified_path`, `source_panic_string_bytes_execute_with_both_trace_policies`, `scalar_c_calls_return_through_c_and_cross_register_pressure_boundaries` |
 | Success, reported failure, attribution and pressure | `adversarial_numeric_boundaries_execute_through_the_verified_path`, `checked_division_failure_preserves_runtime_reporting_and_trace_policy`, `failed_checked_cast_reports_at_its_source_operation`, `absent_optional_unwrap_preserves_runtime_reporting_and_trace_policy`, `guarded_optional_mutation_reports_the_language_failure`, `shared_finalizer_failure_preserves_source_attribution_and_stops_before_free`, `destructor_failure_keeps_the_user_body_and_cleanup_site_in_the_trace`, `static_lifecycle_failures_keep_source_frames_and_exclude_coordinators`, the two policy matrices and the C pressure witness |
-| Hard-defect negatives and deterministic publication | `independent_native_verification_rejects_corrupt_fields_effects_flags_and_reference_caches`, `invalid_encodings_recipes_dependencies_and_provenance_reject`, `selected_closure_rejects_a_locally_valid_body_pruned_by_its_lower_parent`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pilot_artifact_and_checkpoints_are_deterministic_across_processes` |
+| Hard-defect negatives and deterministic publication | `independent_native_verification_rejects_corrupt_fields_effects_flags_and_reference_caches`, `invalid_encodings_recipes_dependencies_and_provenance_reject`, `selected_closure_rejects_a_locally_valid_body_pruned_by_its_lower_parent`, `requested_checkpoints_are_independent_deterministic_and_quiet_by_default`, `private_pipeline_artifact_and_checkpoints_are_deterministic_across_processes` |
 
 Structural observations are the checked lowered/selected/placement/frame/physical
 inventories asserted by these fixtures, including nonzero outgoing areas,
@@ -681,7 +680,7 @@ Carry these accepted constraints into the native design:
 | --- | --- |
 | LA02 | Complete: checked declarations, full lowered vocabulary/verification/publication, program inventories/target extensions, selected structural and mandatory target verification, consuming edits, snapshot analysis and deterministic inspection; native obligations transferred above |
 | LA03 | Complete private scalar/control-flow/call pilot: target resources, selection, checked baseline placement, symbolic frames, physical verification/closure, hardened x86 execution and synthetic target contract witnesses. Its private gate and observation adapters transfer to LA05 |
-| LA04 | [Accepted complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md) and [active roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md): full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, strings, I/O, aggregate calls/results, dispatch, generated helpers, entry/static initialization/shutdown and complete-mode inactive statics; update each inventory row with delivery evidence |
+| LA04 | Complete: the [accepted design](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md) and [archived roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) deliver full operation/helper migration and native parity for lifecycle, objects, optionals, arrays, strings, I/O, aggregate calls/results, dispatch, generated helpers, entry/static initialization/shutdown and complete-mode inactive statics |
 | LA05 | One production LIR pipeline, public requested observations, reporting/determinism parity, private-gate and legacy-path removal, portability/cumulative review and frozen foundation cost acceptance; preserve all eleven inconclusive timing classifications until compatible paired captures resolve them |
 | LA06 | Separate allocation design, implementation/checking and measured adoption after foundation consolidation |
 
@@ -895,12 +894,12 @@ payloads and numeric boundaries against independent references, including loops
 and preceding correction joins. Reporter signature, ABI, effects and exact
 message/length are checked independently. A call's trace-state barrier does not
 request caller TLS; explicit trace accesses still require enabled policy and
-TLS authority. Native call/trace selection now covers the complete private pilot,
+TLS authority. Native call/trace selection now covers the complete private pipeline,
 including entry, indirect targets, pressure slots, nonreturning calls, both trace
 policies and selected-program closure after body release. Concrete trace sequence
 and frame checks use frozen parent facts. Typed physical-program closure streams
 checked fragments and reconciles exact finalized parents before assembly
-publication. The private whole-program pilot drives planned source through
+publication. The private whole-program pipeline drives planned source through
 projection, frozen discovery, lowering, selection, baseline placement, symbolic
 frames, physical verification and exact artifact closure without fallback. Native
 execution covers the explicit trace/MIR/artifact-policy matrix, primitive and

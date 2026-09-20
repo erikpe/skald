@@ -1,5 +1,5 @@
 use super::LowerError;
-use crate::backend::planning::AdmittedProgram;
+use crate::backend::planning::PlannedProgram;
 use crate::{
     backend::{
         lir::{
@@ -13,7 +13,7 @@ use crate::{
 use std::collections::BTreeMap;
 
 pub(super) struct Lowerer<'plan, 'input> {
-    pub(super) admitted: &'plan AdmittedProgram<'input>,
+    pub(super) planned: &'plan PlannedProgram<'input>,
     pub(super) definition: MirDefinitionRef<'plan>,
     pub(super) builder: DraftBuilder<'plan>,
     /// Stable entries named by MIR edges.
@@ -46,17 +46,17 @@ pub(super) struct EntryObjectOrigin<'plan> {
 
 impl<'plan, 'input> Lowerer<'plan, 'input> {
     pub(super) fn new(
-        admitted: &'plan AdmittedProgram<'input>,
+        planned: &'plan PlannedProgram<'input>,
         owner: CallableBinding<'plan>,
     ) -> Result<Self, LowerError> {
-        admitted
+        planned
             .plan()
             .view()
             .require_same_context(owner.context())?;
         let LirCallableId::Source(callable) = owner.key() else {
             return Err(PlanError::InvalidDomain.into());
         };
-        let definition = definition(admitted, callable)?;
+        let definition = definition(planned, callable)?;
         let mut builder = DraftBuilder::new(owner)?;
         let blocks = definition
             .body()
@@ -69,7 +69,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             .iter()
             .map(|value| {
                 builder
-                    .reserve_value(scalar_type(admitted, value.ty)?, Some(value.span))
+                    .reserve_value(scalar_type(planned, value.ty)?, Some(value.span))
                     .map_err(LowerError::from)
             })
             .collect::<Result<Vec<_>, LowerError>>()?;
@@ -95,7 +95,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
             })
             .collect();
         let mut lowerer = Self {
-            admitted,
+            planned,
             definition,
             builder,
             active_blocks: blocks.clone(),
@@ -170,7 +170,7 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
         Ok(lowerer)
     }
     pub(super) fn plan(&self) -> PlanView<'plan> {
-        self.admitted.plan().view()
+        self.planned.plan().view()
     }
     pub(super) fn finish(mut self) -> Result<VerifiedCallable<'plan>, LowerError> {
         for block in &self.definition.body().blocks {
@@ -190,10 +190,10 @@ impl<'plan, 'input> Lowerer<'plan, 'input> {
 }
 
 pub(super) fn definition<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     callable: CallableId,
 ) -> Result<MirDefinitionRef<'plan>, LowerError> {
-    let program = admitted.program();
+    let program = planned.program();
     match callable {
         CallableId::Function(id) => program.definitions.get(id).map(MirDefinitionRef::Function),
         CallableId::StaticInitializer(id) => program
@@ -209,7 +209,7 @@ pub(super) fn definition<'plan>(
 }
 
 pub(super) fn scalar_type(
-    admitted: &AdmittedProgram<'_>,
+    planned: &PlannedProgram<'_>,
     ty: MirType,
 ) -> Result<ScalarType, LowerError> {
     Ok(match ty {
@@ -219,13 +219,13 @@ pub(super) fn scalar_type(
         MirType::Bool => ScalarType::Bool,
         MirType::F64 => ScalarType::F64,
         MirType::Function(id) => ScalarType::CodeAddress(
-            admitted
+            planned
                 .function_type(id)
                 .ok_or(PlanError::UnknownDeclaration)?,
         ),
         MirType::Shared(_) => ScalarType::DataAddress,
         MirType::Optional(id)
-            if admitted
+            if planned
                 .program()
                 .optional_type(id)
                 .is_some_and(|optional| optional.shared_owner().is_some()) =>

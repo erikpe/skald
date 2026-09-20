@@ -25,6 +25,8 @@ For current information, use:
 
 Archived plans:
 
+- [Complete low-level lowering migration frozen design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+- [Complete low-level lowering migration](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
 - [Low-level compiler architecture resolved discoveries](LOW_LEVEL_COMPILER_ARCHITECTURE_DISCOVERIES.md)
 - [Target selection, checked placement and physical realization frozen design](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 - [Target selection, checked placement and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)

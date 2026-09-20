@@ -12,7 +12,7 @@ fn fixture(source: &str) -> crate::test_support::FinalMirWithSources {
 #[test]
 fn scalar_and_higher_order_signatures_have_complete_checked_pools() {
     let fixture = fixture("fn add(value: i64) -> i64 { return value + 1; } fn choose() -> fn(i64) -> i64 { return add; } fn invoke(callback: fn(i64) -> i64) -> i64 { return callback(4); } fn main() -> i64 { var callback: fn(i64) -> i64 = choose(); return invoke(callback); }");
-    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let plan = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert_eq!(plan.program().executable_definitions().count(), 4);
     let view = plan.plan().view();
     assert_eq!(view.runtime_trace(), RuntimeTracePolicy::Omitted);
@@ -58,9 +58,9 @@ fn scalar_and_higher_order_signatures_have_complete_checked_pools() {
 }
 
 #[test]
-fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
+fn arithmetic_checks_and_all_primitive_cells_are_planned() {
     let fixture = fixture("fn compute(x: i64, y: u64, z: u8, f: f64, b: bool) -> i64 { var n: i64 = (i64) f; var count: u64 = 1u; while (count < 3u) { n = n + (x << count); count = count + 1u; } if (b) { return n / x + n % x; } return ((i64) y) + ((i64) z); } fn main() -> i64 { return compute(2, 3u, 4u8, 5.0, true); }");
-    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let plan = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert!(plan
         .plan()
         .view()
@@ -69,7 +69,7 @@ fn arithmetic_checks_and_all_primitive_cells_are_admitted() {
 }
 
 #[test]
-fn static_storage_is_admitted_under_both_artifact_policies() {
+fn static_storage_is_planned_under_both_artifact_policies() {
     let fixture = lower_source_to_complete_final_mir_with_sources(
         "excluded.ska",
         "class State { static count: i64; init() {} } fn main() -> i64 { return State.count; }",
@@ -78,8 +78,8 @@ fn static_storage_is_admitted_under_both_artifact_policies() {
         BackendInput::without_runtime_trace(&fixture.mir),
         BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
-        let admitted = admit(input).expect("static storage is supported");
-        assert!(admitted
+        let planned = plan_program(input).expect("static storage is supported");
+        assert!(planned
             .plan()
             .view()
             .resources()
@@ -110,7 +110,7 @@ fn sparse_domains_preserve_absent_declarations_and_never_resurrect_bodies() {
         if reachable {
             input = input.with_reachable_artifacts_only();
         }
-        let plan = admit(input).unwrap();
+        let plan = plan_program(input).unwrap();
         let view = plan.plan().view();
         assert_eq!(
             view.callables()
@@ -142,7 +142,7 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
         "trace.ska",
         "fn main() -> i64 { var x: i64 = 2; return x; }",
     );
-    let enabled = admit(BackendInput::with_runtime_trace(
+    let enabled = plan_program(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ))
@@ -174,16 +174,16 @@ fn enabled_trace_facts_are_owned_and_omitted_never_looks_up_sources() {
     }
     let empty = crate::source::SourceDatabase::new();
     assert!(matches!(
-        admit(BackendInput::with_runtime_trace(&fixture.mir, &empty)),
-        Err(AdmissionError::Backend(_))
+        plan_program(BackendInput::with_runtime_trace(&fixture.mir, &empty)),
+        Err(PlanningError::Backend(_))
     ));
-    let omitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let omitted = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert!(omitted.trace().strings.is_empty());
     assert!(omitted.plan().view().resources().tls.is_none());
 }
 
 #[test]
-fn static_lifecycle_is_admitted_with_frozen_activation_authority() {
+fn static_lifecycle_is_planned_with_frozen_activation_authority() {
     let fixture = fixture(
         "class State { static count: i64 = 4; init() {} } fn main() -> i64 { return State.count; }",
     );
@@ -191,8 +191,8 @@ fn static_lifecycle_is_admitted_with_frozen_activation_authority() {
         BackendInput::without_runtime_trace(&fixture.mir),
         BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
     ] {
-        let admitted = admit(input).expect("static lifecycle is supported");
-        let resources = admitted.plan().view().resources();
+        let planned = plan_program(input).expect("static lifecycle is supported");
+        let resources = planned.plan().view().resources();
         assert_eq!(resources.activation.len(), 1);
         assert_eq!(resources.activation[0].field, resources.statics[0].field);
         assert_eq!(resources.shutdown.len(), 1);
@@ -202,7 +202,7 @@ fn static_lifecycle_is_admitted_with_frozen_activation_authority() {
 }
 
 #[test]
-fn class_lifecycle_is_admitted_under_both_artifact_policies() {
+fn class_lifecycle_is_planned_under_both_artifact_policies() {
     for source in [
         "class Item { init() {} } fn dead(value: shared Item) -> i64 { return 0; } fn main() -> i64 { return 0; }",
         "class Item { init() {} fn value() -> i64 { return 1; } } fn main() -> i64 { var item: Item = Item(); return item.value(); }",
@@ -212,13 +212,13 @@ fn class_lifecycle_is_admitted_under_both_artifact_policies() {
             BackendInput::without_runtime_trace(&fixture.mir),
             BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
         ] {
-            admit(input).expect("class lifecycle is complete under both artifact policies");
+            plan_program(input).expect("class lifecycle is complete under both artifact policies");
         }
     }
 }
 
 #[test]
-fn optional_abi_and_admission_cover_recursive_storage() {
+fn optional_abi_and_planning_cover_recursive_storage() {
     let supported = fixture(concat!(
         "class Value { init(){} }",
         "fn tagged(value:i64?)->i64?{return value;}",
@@ -230,10 +230,10 @@ fn optional_abi_and_admission_cover_recursive_storage() {
         BackendInput::without_runtime_trace(&supported.mir),
         BackendInput::without_runtime_trace(&supported.mir).with_reachable_artifacts_only(),
     ] {
-        let admitted = admit(input).expect("recursive non-array optionals are supported");
-        let view = admitted.plan().view();
+        let planned = plan_program(input).expect("recursive non-array optionals are supported");
+        let view = planned.plan().view();
         let signature = |name| {
-            let function = admitted
+            let function = planned
                 .program()
                 .declarations
                 .iter()
@@ -269,14 +269,14 @@ fn optional_abi_and_admission_cover_recursive_storage() {
         BackendInput::without_runtime_trace(&inline_array.mir),
         BackendInput::without_runtime_trace(&inline_array.mir).with_reachable_artifacts_only(),
     ] {
-        admit(input).expect("inline-array optional lifecycle is supported");
+        plan_program(input).expect("inline-array optional lifecycle is supported");
     }
 }
 
 #[test]
 fn extern_cells_are_projected_without_changing_public_emission() {
     let fixture = fixture("extern fn foreign(a: i64, b: u64, c: u8, d: f64, e: bool) -> i64; fn main() -> i64 { return foreign(1, 2u, 3u8, 4.0, true); }");
-    let plan = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let plan = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     assert_eq!(
         plan.plan()
             .view()
@@ -294,7 +294,7 @@ fn extern_cells_are_projected_without_changing_public_emission() {
 }
 
 #[test]
-fn normalized_intrinsics_and_user_panic_cross_the_admission_boundary() {
+fn normalized_intrinsics_and_user_panic_cross_the_planning_boundary() {
     for source in [
         "import std::f64; extern fn input() -> f64; fn main() -> i64 { return (i64) std::f64::from_bits(std::f64::to_bits(input())); }",
         "import std::io; fn main() -> i64 { std::io::println_i64(1); return 0; }",
@@ -306,14 +306,14 @@ fn normalized_intrinsics_and_user_panic_cross_the_admission_boundary() {
         assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
         let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
         let verified = crate::passes::run_mir_pipeline(program).unwrap();
-        admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
+        plan_program(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
             .unwrap_or_else(|error| panic!("{source}: {error}"));
     }
     let fixture = crate::mir::test_fixtures::verified_io_fixture_with_sources(
         "import std::error; fn main()->i64{std::error::panic(\"failure\");}",
         "",
     );
-    admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
 }
 
 #[test]
@@ -329,8 +329,9 @@ fn sparse_receiverless_methods_share_canonical_code_signatures() {
     let sparse =
         crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
             .unwrap();
-    let plan = admit(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
-        .unwrap();
+    let plan =
+        plan_program(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
+            .unwrap();
     let method = sparse
         .program()
         .classes
@@ -357,7 +358,7 @@ fn sparse_receiverless_methods_share_canonical_code_signatures() {
         .view()
         .callables()
         .any(|c| c.body == BodyDisposition::Absent));
-    let complete = admit(BackendInput::without_runtime_trace(&sparse)).unwrap();
+    let complete = plan_program(BackendInput::without_runtime_trace(&sparse)).unwrap();
     assert!(complete
         .plan()
         .view()
@@ -384,7 +385,7 @@ fn sparse_receiverless_methods_share_canonical_code_signatures() {
 fn absent_signatures_preserve_source_identity_despite_equal_physical_cells() {
     let fixture = fixture("fn read(ref x: i64) -> i64 { return x; } fn write(mut ref x: i64) -> i64 { return x; } fn ro(callback: fn(ref i64) -> i64) -> unit {} fn rw(callback: fn(mut ref i64) -> i64) -> unit {} fn main() -> i64 { return 0; }");
     let verified = crate::passes::run_mir_pipeline(fixture.mir.program().clone()).unwrap();
-    let plan = admit(BackendInput::without_runtime_trace(&verified)).unwrap();
+    let plan = plan_program(BackendInput::without_runtime_trace(&verified)).unwrap();
     let view = plan.plan().view();
     let signature = |name| {
         let id = plan
@@ -426,7 +427,7 @@ fn absent_signatures_preserve_source_identity_despite_equal_physical_cells() {
 }
 
 #[test]
-fn scalar_io_intrinsic_is_admitted_without_lifecycle_dependencies() {
+fn scalar_io_intrinsic_is_planned_without_lifecycle_dependencies() {
     let (_directory, graph) =
         crate::test_support::load_module_sources_with_standard_library_overrides(
             "app",
@@ -456,7 +457,8 @@ fn scalar_io_intrinsic_is_admitted_without_lifecycle_dependencies() {
     assert!(checked.diagnostics.is_empty(), "{:?}", checked.diagnostics);
     let program = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
     let verified = crate::passes::run_mir_pipeline(program).unwrap();
-    admit(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only()).unwrap();
+    plan_program(BackendInput::without_runtime_trace(&verified).with_reachable_artifacts_only())
+        .unwrap();
 }
 
 #[test]
@@ -545,8 +547,8 @@ fn semantic_catalog_freezes_layout_views_dispatch_and_recursive_aggregate_facts(
     let sparse =
         crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
             .unwrap();
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
+    let planned =
+        plan_program(BackendInput::without_runtime_trace(&sparse).with_reachable_artifacts_only())
             .unwrap();
     let aggregate = sparse
         .program()
@@ -554,7 +556,7 @@ fn semantic_catalog_freezes_layout_views_dispatch_and_recursive_aggregate_facts(
         .iter()
         .find(|declaration| declaration.name == "aggregate")
         .unwrap();
-    let declaration = admitted
+    let declaration = planned
         .plan()
         .view()
         .callables()
@@ -562,11 +564,11 @@ fn semantic_catalog_freezes_layout_views_dispatch_and_recursive_aggregate_facts(
         .unwrap();
     assert_eq!(declaration.body, BodyDisposition::Absent);
     assert!(matches!(
-        admitted
+        planned
             .plan()
             .view()
             .signature(
-                admitted
+                planned
                     .plan()
                     .view()
                     .signature_id(declaration.signature.index())
@@ -662,7 +664,7 @@ fn resource_catalog_separates_complete_inactive_storage_from_reachable_storage()
         super::projection::project_resource_catalog(
             BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only()
         ),
-        Err(AdmissionError::Plan(PlanError::InvalidDomain))
+        Err(PlanningError::Plan(PlanError::InvalidDomain))
     ));
 
     use crate::mir::retain::{prepare_reachable_definition_retention, MirDefinitionRetention};

@@ -8,25 +8,25 @@ use crate::{identity::FunctionTypeId, mir::MirType};
 
 #[derive(Debug)]
 #[cfg_attr(not(test), allow(dead_code))]
-pub(in crate::backend) enum AdmissionError {
+pub(in crate::backend) enum PlanningError {
     Backend(BackendError),
     Plan(PlanError),
 }
 
-impl From<BackendError> for AdmissionError {
+impl From<BackendError> for PlanningError {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
     }
 }
-impl From<PlanError> for AdmissionError {
+impl From<PlanError> for PlanningError {
     fn from(error: PlanError) -> Self {
         Self::Plan(error)
     }
 }
 
 /// Immutable maps retain semantic identity even when physical shapes coincide.
-/// Only the admission/projection owner can construct this authority.
-pub(in crate::backend) struct AdmittedProgram<'input> {
+/// Only the checked planning owner can construct this authority.
+pub(in crate::backend) struct PlannedProgram<'input> {
     pub(super) program: &'input crate::mir::MirProgram,
     pub(super) plan: CheckedPlan,
     pub(super) layouts: Vec<(MirType, LayoutId)>,
@@ -35,7 +35,7 @@ pub(in crate::backend) struct AdmittedProgram<'input> {
     pub(super) function_types: BTreeMap<FunctionTypeId, SignatureId>,
 }
 
-impl AdmittedProgram<'_> {
+impl PlannedProgram<'_> {
     pub(in crate::backend) fn program(&self) -> &crate::mir::MirProgram {
         self.program
     }
@@ -67,7 +67,7 @@ pub(in crate::backend) struct TraceFacts {
     pub requests: Vec<TraceRequest>,
 }
 
-impl std::fmt::Display for AdmissionError {
+impl std::fmt::Display for PlanningError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Backend(error) => error.fmt(f),
@@ -75,7 +75,7 @@ impl std::fmt::Display for AdmissionError {
         }
     }
 }
-impl std::error::Error for AdmissionError {}
+impl std::error::Error for PlanningError {}
 
 pub(in crate::backend) struct TraceContext {
     pub name: crate::backend::plan::DataKey,

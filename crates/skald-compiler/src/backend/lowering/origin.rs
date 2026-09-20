@@ -124,7 +124,7 @@ impl<'plan> Lowerer<'plan, '_> {
         }
         if let Some(field) = place.base.static_field() {
             if let MirType::Class(class) = self
-                .admitted
+                .planned
                 .program()
                 .static_field(field)
                 .ok_or(PlanError::UnknownDeclaration)?

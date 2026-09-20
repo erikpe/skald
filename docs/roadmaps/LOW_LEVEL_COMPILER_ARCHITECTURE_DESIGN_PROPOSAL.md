@@ -1,6 +1,7 @@
 # Low-Level Compiler Architecture Design Proposal
 
-Status: accepted architectural direction, updated 2026-09-19. The first child
+Status: accepted architectural direction, updated 2026-09-20. LA01–LA04 are
+complete; LA05 architecture consolidation and adoption design is next. The first child
 [phase architecture design](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md)
 is accepted and frozen, and its
 [preparation roadmap](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_ROADMAP.md) is complete.
@@ -20,13 +21,11 @@ program closure and private whole-program orchestration are implemented under th
 [archived target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md).
 The owning model records the implemented streaming publication amendment.
-The accepted, frozen
-[complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-is promoted through its
-[implementation roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md). Durable
-migration ownership and the explicit no-fallback gate are complete; semantic
-layout and object-view planning facts are next.
-Production migration, adoption and
+The accepted, frozen and implemented
+[complete lowering migration design](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+and [archived implementation roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
+deliver complete private native parity without per-operation fallback.
+Production adoption and
 allocation remain pending; preserved measurements grant no cost clearance.
 Repository assessment baseline:
 `f97a9e51`. Program implementation baseline: `495debd3`, before the migration
@@ -314,7 +313,7 @@ inherited invariants, detailed decisions, scope, tests, and transition artifacts
 | LA01 | **[Phase architecture and backend ownership](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md):** phase products, LIR scope, shared/target split, invariants, observation and error boundaries | Accepted contracts, representative x86/AArch64 walkthroughs, coverage inventory, and foundation validation/measurement policy | This overarching direction accepted |
 | LA02 | **[LIR model, construction, and verification](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md):** identities, values, memory, CFG/edges, effects, calls, mutation and dumps | Complete; [archived roadmap](../archive/LOW_LEVEL_IR_MODEL_ROADMAP.md). Executable checked models and current [handoff](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md#common-model-readiness) delivered | Common/selected readiness passed; concrete native counterparts remain LA03 |
 | LA03 | **[Target selection and physical realization](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md) (accepted, frozen and implemented):** x86 instruction/ABI selection, stack-based placement, symbolic frames, transfer resolution, legalization, and emission | Complete; [archived roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md) delivers an executable checked scalar/control-flow/call pilot through every new phase | LA01–LA02; complete, with migration/adoption/allocation transferred to LA04–LA06 |
-| LA04 | **[Complete lowering migration](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md) (accepted, frozen and promoted):** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | [Active roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) delivers complete supported x86 behavior through LIR and stack placement, explicit operation/helper coverage and native parity | LA03 and durable migration ownership complete; semantic layout and object-view planning facts are next |
+| LA04 | **[Complete lowering migration](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md) (accepted, frozen and implemented):** all remaining operations, ownership, objects, optionals, arrays, helpers, static lifecycle, traces, entry, and artifact retention | Complete; the [archived roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) delivers complete supported x86 behavior through LIR and stack placement, explicit operation/helper coverage and native parity | LA03 and durable migration ownership complete |
 | LA05 | **Architecture consolidation and adoption:** production default, phase observations, living contracts, fallback removal, and cumulative review | Independently complete foundation; old direct lowering retired; one maintained LIR pipeline with verified baseline placement | LA04; portability review and full foundation validation |
 | LA06 | **Register allocation:** allocator selection, liveness, constraints, preserved registers, splitting/spilling, coalescing scope, checking, and measured adoption | Proper allocation implemented through the existing placement contract; separate acceptance evidence and explicit disposition of baseline placement | LA05; own design and implementation roadmap |
 
@@ -441,12 +440,11 @@ contract. Exact Rust schemas, executable seals, operation inventories, and
 target interfaces remain with LA02/LA03.
 An allocator algorithm or library is chosen by LA06. Full semantic SSA,
 scalar promotion, and a complete second target retain their own scope and
-delivery decisions. Phase preparation and the private native pilot have qualified
+delivery decisions. Phase preparation and the private native pipeline have qualified
 the current boundaries; noisy cost gates remain inconclusive. The accepted,
-frozen [LA04 design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-defines complete lowering migration; its
-[implementation roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) has
-established durable migration ownership and now expands planning facts, using the
+frozen [LA04 design](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+and [implementation roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
+deliver complete private parity and transfer production adoption to LA05, using the
 [archived native design](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md),
 [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md),
 [frozen model design](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md), and active

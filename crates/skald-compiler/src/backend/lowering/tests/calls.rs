@@ -3,7 +3,7 @@ use crate::{
         lir::{CallAttribution, CallTarget, DataInitializer, Operation, Terminator, TraceAction},
         lowering::{lower_program, LowerError},
         plan::{ArtifactId, Convention, DataKey, LirCallableId, RuntimeService},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -20,9 +20,10 @@ fn object_aliases_and_direct_receivers_cross_role_based_lowering() {
          fn inspect_value(pair: Pair) -> i64 { return pair.value; } \
          fn main() -> i64 { var pair: Pair = Pair(7); return invoke(pair) + inspect_value(pair); }",
     );
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
-            .unwrap();
+    let planned = plan_program(
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    )
+    .unwrap();
 
     let definitions = fixture
         .mir
@@ -44,12 +45,12 @@ fn object_aliases_and_direct_receivers_cross_role_based_lowering() {
     let mut receiver_call = false;
     let mut projected_load = false;
     for definition in definitions {
-        let owner = admitted
+        let owner = planned
             .plan()
             .view()
             .callable(LirCallableId::Source(definition.callable()))
             .unwrap();
-        let body = super::super::context::Lowerer::new(&admitted, owner)
+        let body = super::super::context::Lowerer::new(&planned, owner)
             .unwrap()
             .finish()
             .unwrap();
@@ -95,20 +96,20 @@ fn object_aliases_and_direct_receivers_cross_role_based_lowering() {
 #[test]
 fn direct_indirect_external_and_unit_calls_close_the_entire_inventory() {
     let fixture = lower_source_to_complete_final_mir_with_sources("calls.ska", "extern fn foreign(a: i64, b: f64) -> i64; fn identity(a: i64) -> i64 { return a; } fn ignore(a: i64) -> unit { } fn invoke(f: fn(i64) -> i64, a: i64) -> i64 { return f(a); } fn main() -> i64 { ignore(1); return foreign(invoke(identity, 7), 2.5); }");
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     let mut direct = 0;
     let mut indirect = 0;
     let mut external = 0;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         assert!(body.draft().trace_plan().is_none());
         for (_, block) in body.draft().blocks() {
             for instruction in &block.instructions {
                 if let Operation::Call(call) = &instruction.operation {
-                    let signature = admitted
+                    let signature = planned
                         .plan()
                         .view()
                         .signature(
-                            admitted
+                            planned
                                 .plan()
                                 .view()
                                 .signature_id(call.signature.index())
@@ -157,13 +158,13 @@ fn process_entry_calls_marker_then_main_and_returns_its_exact_result_without_a_t
         "entry.ska",
         "fn main() -> i64 { return 37; }",
     );
-    let admitted = admit(BackendInput::with_runtime_trace(
+    let planned = plan_program(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ))
     .unwrap();
     let mut entry_seen = false;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         if body.receipt().owner().key() == LirCallableId::Entry {
             entry_seen = true;
             assert!(body.draft().trace_plan().is_none());
@@ -206,14 +207,14 @@ fn process_entry_calls_marker_then_main_and_returns_its_exact_result_without_a_t
 fn traced_calls_store_results_before_pop_and_failure_updates_are_failure_only() {
     use crate::backend::effects::Effect;
     let fixture = lower_source_to_complete_final_mir_with_sources("trace.ska", "fn divide(a: i64, b: i64) -> i64 { return a / b; } fn main() -> i64 { var result: i64 = divide(12, 3); return result; }");
-    let admitted = admit(BackendInput::with_runtime_trace(
+    let planned = plan_program(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ))
     .unwrap();
     let mut failures = 0;
     let mut calls = 0;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         if body.receipt().owner().key() == LirCallableId::Entry {return Ok(());}
         let draft = body.draft();
         let trace = draft.trace_plan().unwrap();
@@ -269,8 +270,8 @@ fn omitted_lowering_needs_no_sources_and_requests_no_trace_data_or_tls() {
         "omit.ska",
         "fn main() -> i64 { return 12 / 3; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let program = lower_program(&admitted, |body| {
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let program = lower_program(&planned, |body| {
         assert!(body.draft().trace_plan().is_none());
         assert!(!body.receipt().references().contains(&ArtifactId::TraceTls));
         assert!(body
@@ -284,7 +285,7 @@ fn omitted_lowering_needs_no_sources_and_requests_no_trace_data_or_tls() {
     assert!(program
         .data()
         .all(|data| matches!(data.key, DataKey::FailureMessage(_))));
-    assert!(admitted.trace().requests.is_empty());
+    assert!(planned.trace().requests.is_empty());
 }
 
 #[test]
@@ -293,9 +294,9 @@ fn a_consumer_failure_cannot_publish_complete_program_authority() {
         "consumer.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     let mut visited = 0;
-    assert!(lower_program(&admitted, |_| {
+    assert!(lower_program(&planned, |_| {
         visited += 1;
         Err(LowerError::Plan(
             crate::backend::plan::PlanError::InvalidDomain,
@@ -312,18 +313,18 @@ fn an_indirect_target_cannot_borrow_another_canonical_signature() {
         plan::{ComponentRole, ScalarType},
     };
     let fixture = lower_source_to_complete_final_mir_with_sources("signatures.ska", "fn integer(a: i64) -> i64 { return a; } fn floating(a: f64) -> f64 { return a; } fn main() -> i64 { var i: fn(i64) -> i64 = integer; var f: fn(f64) -> f64 = floating; return i(1); }");
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let plan = admitted.plan().view();
-    let mut signatures = admitted
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let plan = planned.plan().view();
+    let mut signatures = planned
         .program()
         .function_types
         .iter()
-        .map(|ty| admitted.function_type(ty.id).unwrap());
+        .map(|ty| planned.function_type(ty.id).unwrap());
     let first = signatures.next().unwrap();
     let other = signatures.find(|id| *id != first).unwrap();
     let mut builder = DraftBuilder::new(
         plan.callable(LirCallableId::Source(
-            admitted.program().entry_function.into(),
+            planned.program().entry_function.into(),
         ))
         .unwrap(),
     )
@@ -356,7 +357,7 @@ fn an_indirect_target_cannot_borrow_another_canonical_signature() {
                     value: argument
                 }],
                 attribution: CallAttribution::SourceOperation {
-                    origin: admitted.program().span,
+                    origin: planned.program().span,
                     location: None
                 }
             })
@@ -378,12 +379,12 @@ fn sparse_receiverless_static_calls_close_without_resurrecting_lifecycle_bodies(
     let sparse =
         crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
             .unwrap();
-    let admitted = admit(
+    let planned = plan_program(
         BackendInput::with_runtime_trace(&sparse, &fixture.sources).with_reachable_artifacts_only(),
     )
     .unwrap();
     let mut method_calls = 0;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         for (_, block) in body.draft().blocks() {
             for instruction in &block.instructions {
                 if let Operation::Call(call) = &instruction.operation {

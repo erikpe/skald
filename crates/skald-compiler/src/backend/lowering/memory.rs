@@ -45,7 +45,7 @@ impl<'plan> Lowerer<'plan, '_> {
                     .ok_or(PlanError::UnknownDeclaration)?
                     .handle_layout
             } else {
-                self.admitted
+                self.planned
                     .layout(storage.ty)
                     .ok_or(PlanError::UnknownDeclaration)?
             };
@@ -66,7 +66,7 @@ impl<'plan> Lowerer<'plan, '_> {
             ) || (matches!(
                 storage.kind,
                 crate::mir::MirStorageKind::Return | crate::mir::MirStorageKind::Parameter
-            ) && scalar_type(self.admitted, storage.ty).is_err());
+            ) && scalar_type(self.planned, storage.ty).is_err());
             self.objects.push(if caller_addressed {
                 None
             } else {
@@ -103,12 +103,12 @@ impl<'plan> Lowerer<'plan, '_> {
         }
         let ty = storage.ty;
         let id = self
-            .admitted
+            .planned
             .layout(ty)
             .ok_or(PlanError::UnknownDeclaration)?;
         let layout = self.plan().layout(self.plan().layout_id(id.index())?)?;
         Ok(MemoryRepresentation {
-            scalar: scalar_type(self.admitted, ty)?,
+            scalar: scalar_type(self.planned, ty)?,
             bytes: layout.size,
             alignment: layout.alignment,
         })

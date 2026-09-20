@@ -113,7 +113,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let metadata = match ty {
             MirType::Class(class) => DataKey::ClassDispatch(class),
             MirType::Optional(optional) => DataKey::OptionalBoxDescriptor(
-                self.admitted
+                self.planned
                     .program()
                     .exact_optional_box_type(optional)
                     .ok_or(PlanError::UnknownDeclaration)?

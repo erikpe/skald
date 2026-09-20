@@ -3,7 +3,7 @@ use crate::{
         lir::{CallAttribution, CallTarget, Operation},
         lowering::lower_program,
         plan::{ArtifactId, HelperFamily, LirCallableId},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     identity::CallableId,
@@ -22,12 +22,13 @@ fn generated_finalizers_preserve_body_field_base_order_and_close_the_worklist() 
             "fn main()->i64{var owner:Owner=Owner();return 7;}",
         ),
     );
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
-            .unwrap();
+    let planned = plan_program(
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    )
+    .unwrap();
     let mut finalizers = 0;
     let mut ordered_owner = false;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         let LirCallableId::Helper(key) = body.receipt().owner().key() else {
             return Ok(());
         };

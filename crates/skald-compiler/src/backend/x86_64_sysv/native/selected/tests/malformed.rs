@@ -130,17 +130,17 @@ fn native_profile_and_resource_catalog_are_independent_publication_requirements(
         "native.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(crate::backend::BackendInput::without_runtime_trace(
+    let planned = plan_program(crate::backend::BackendInput::without_runtime_trace(
         &fixture.mir,
     ))
     .unwrap();
-    let catalog = TargetDeclarations::new(admitted.plan().view())
+    let catalog = TargetDeclarations::new(planned.plan().view())
         .freeze()
         .unwrap();
     let mut context = selection_context(&catalog).unwrap();
     context.resources.unit().unwrap(); // Structurally legal, but not x86's catalog.
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let lower = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let lower = lower_next(&planned, &mut worklist).unwrap().unwrap();
     match select(&context, &lower) {
         Err(SelectionError::Verify(failures)) => assert!(failures.iter().any(|f| matches!(
             f.reason,

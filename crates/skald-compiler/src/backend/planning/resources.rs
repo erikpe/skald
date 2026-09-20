@@ -7,14 +7,14 @@ use crate::{
     mir::{MirProgram, MirSharedTarget, MirStaticActivationWork, MirStaticValueCleanup, MirType},
 };
 
-use super::{AdmissionError, TraceFacts};
+use super::{PlanningError, TraceFacts};
 
 pub(super) fn project(
     input: BackendInput<'_>,
     layouts: &[(MirType, LayoutId)],
     trace: &TraceFacts,
     facts: &mut PlanFacts,
-) -> Result<(), AdmissionError> {
+) -> Result<(), PlanningError> {
     let program = input.program();
     declare_runtime_services(facts)?;
     declare_static_resources(input, program, layouts, facts)?;
@@ -82,7 +82,7 @@ fn declare_static_resources(
     program: &MirProgram,
     layouts: &[(MirType, LayoutId)],
     facts: &mut PlanFacts,
-) -> Result<(), AdmissionError> {
+) -> Result<(), PlanningError> {
     let active = input
         .active_static_fields()
         .iter()

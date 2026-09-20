@@ -1,17 +1,17 @@
 # Complete Low-Level Lowering Migration Design Proposal
 
-Status: accepted, frozen and promoted on 2026-09-19. Accepted after review of
-the proposal committed as `a099d228`. Implementation:
+Status: accepted, frozen, implemented and archived on 2026-09-20. Accepted after
+review of the proposal committed as `a099d228`. Implementation:
 [complete lowering migration roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md),
 implemented from baseline `9e6177fe`. Source assessment: `edff66b5`, after completion
 of the private native pilot and the independent golden-artifact ownership fix. Parent:
-[Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+[Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Inherited contracts: the frozen
-[phase architecture](../archive/LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
-[LIR model](../archive/LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md), and
-[target selection and physical realization](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
+[phase architecture](LOW_LEVEL_PHASE_ARCHITECTURE_DESIGN_PROPOSAL.md),
+[LIR model](LOW_LEVEL_IR_MODEL_DESIGN_PROPOSAL.md), and
+[target selection and physical realization](TARGET_SELECTION_PHYSICAL_REALIZATION_DESIGN_PROPOSAL.md)
 designs. The maintained
-[migration coverage record](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
+[migration coverage record](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md) is the
 exhaustive handoff and remains authoritative for operation, helper, witness,
 and transition status.
 

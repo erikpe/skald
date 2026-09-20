@@ -17,7 +17,7 @@ use crate::{
             CallableBinding, ComponentRole, DataKey, HelperFamily, LayoutId, LirCallableId,
             OptionalStorageFact, PlanError, PlanView, RuntimeService, ScalarType, SemanticType,
         },
-        planning::AdmittedProgram,
+        planning::PlannedProgram,
     },
     identity::{ClassId, OptionalTypeId},
     mir::{MirCopyCapability, MirSynthesizedFieldCopy},
@@ -27,11 +27,11 @@ use crate::{
 use super::super::LowerError;
 
 pub(super) fn initializer<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     array: &crate::backend::plan::ArrayLayoutFact,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let mut emitter = Emitter::new(admitted, owner)?;
+    let mut emitter = Emitter::new(planned, owner)?;
     let [backing, index] = emitter.inputs.as_slice() else {
         return Err(PlanError::InvalidSignature.into());
     };
@@ -112,11 +112,11 @@ pub(super) fn initializer<'plan>(
 }
 
 pub(super) fn copier<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     array: &crate::backend::plan::ArrayLayoutFact,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let mut emitter = Emitter::new(admitted, owner)?;
+    let mut emitter = Emitter::new(planned, owner)?;
     let [destination, source, destination_index, source_index] = emitter.inputs.as_slice() else {
         return Err(PlanError::InvalidSignature.into());
     };
@@ -167,11 +167,11 @@ pub(super) fn copier<'plan>(
 }
 
 pub(super) fn destroyer<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     array: &crate::backend::plan::ArrayLayoutFact,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let mut emitter = Emitter::new(admitted, owner)?;
+    let mut emitter = Emitter::new(planned, owner)?;
     let [backing, index] = emitter.inputs.as_slice() else {
         return Err(PlanError::InvalidSignature.into());
     };
@@ -204,11 +204,11 @@ pub(super) fn destroyer<'plan>(
 }
 
 pub(super) fn raw_class_copy<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     layout: LayoutId,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let class = admitted
+    let class = planned
         .plan()
         .view()
         .semantic()
@@ -217,14 +217,14 @@ pub(super) fn raw_class_copy<'plan>(
         .find(|class| class.complete_layout == layout)
         .map(|class| class.class)
         .ok_or(PlanError::UnknownDeclaration)?;
-    let mut emitter = Emitter::new(admitted, owner)?;
+    let mut emitter = Emitter::new(planned, owner)?;
     let [destination, source] = emitter.inputs.as_slice() else {
         return Err(PlanError::InvalidSignature.into());
     };
     let destination = *destination;
     let source = *source;
     let current = emitter.entry;
-    let capability = admitted
+    let capability = planned
         .program()
         .class(class)
         .ok_or(PlanError::UnknownDeclaration)?
@@ -274,10 +274,10 @@ struct Emitter<'plan> {
 
 impl<'plan> Emitter<'plan> {
     fn new(
-        admitted: &'plan AdmittedProgram<'_>,
+        planned: &'plan PlannedProgram<'_>,
         owner: CallableBinding<'plan>,
     ) -> Result<Self, LowerError> {
-        let plan = admitted.plan().view();
+        let plan = planned.plan().view();
         let boundary = owner.key();
         let (builder, entry, inputs) = begin(owner)?;
         Ok(Self {

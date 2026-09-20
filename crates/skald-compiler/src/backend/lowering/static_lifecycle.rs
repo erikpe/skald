@@ -13,15 +13,15 @@ use crate::backend::{
         ArtifactId, CallableBinding, ComponentRole, Coordinator, DataKey, HelperFamily, LayoutId,
         LirCallableId, PlanError, PlanView, ScalarType, StaticActivationKind, StaticCleanupFact,
     },
-    planning::AdmittedProgram,
+    planning::PlannedProgram,
 };
 
 pub(super) fn lower<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
     coordinator: Coordinator,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let mut builder = DraftBuilder::new(owner)?;
     if builder.inputs().next().is_some() {

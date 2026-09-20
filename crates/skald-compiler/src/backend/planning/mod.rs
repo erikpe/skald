@@ -11,10 +11,10 @@ mod signatures;
 
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use facts::{
-    AdmissionError, AdmittedProgram, TraceContext, TraceFacts, TraceLocation, TraceRequest,
+    PlannedProgram, PlanningError, TraceContext, TraceFacts, TraceLocation, TraceRequest,
 };
 #[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use projection::admit;
+pub(in crate::backend) use projection::plan_program;
 #[cfg(test)]
 pub(in crate::backend) use projection::project_resource_catalog;
 

@@ -563,7 +563,7 @@ impl<'plan> Lowerer<'plan, '_> {
                 copy_assignment,
             } => {
                 let optional = self
-                    .admitted
+                    .planned
                     .program()
                     .optional_for_payload(MirType::Class(class))
                     .ok_or(PlanError::UnknownDeclaration)?;

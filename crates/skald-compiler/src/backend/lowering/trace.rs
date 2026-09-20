@@ -15,7 +15,7 @@ use crate::{
 
 impl<'plan> Lowerer<'plan, '_> {
     pub(super) fn location(&self, origin: Span) -> Result<ArtifactId, LowerError> {
-        self.admitted
+        self.planned
             .trace()
             .requests
             .iter()
@@ -33,9 +33,9 @@ impl<'plan> Lowerer<'plan, '_> {
         let ArtifactId::Data(DataKey::TraceLocation(index)) = initial_location else {
             return Err(PlanError::InvalidDomain.into());
         };
-        let context = ArtifactId::Data(self.admitted.trace().locations[index].context);
+        let context = ArtifactId::Data(self.planned.trace().locations[index].context);
         let layout = self
-            .admitted
+            .planned
             .trace_record_layout()
             .ok_or(PlanError::UnknownDeclaration)?;
         let record = self.builder.declare_object(Object {
@@ -45,7 +45,7 @@ impl<'plan> Lowerer<'plan, '_> {
             origin: Some(self.definition.span()),
         })?;
         let locations = self
-            .admitted
+            .planned
             .trace()
             .requests
             .iter()

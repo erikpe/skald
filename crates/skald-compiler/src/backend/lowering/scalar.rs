@@ -179,7 +179,7 @@ impl<'plan> Lowerer<'plan, '_> {
             MirRvalueKind::CallableAddress(address) => Operation::SymbolAddress {
                 symbol: ArtifactId::Callable(LirCallableId::Source(address.target)),
                 ty: ScalarType::CodeAddress(
-                    self.admitted
+                    self.planned
                         .function_type(address.function_type)
                         .ok_or(PlanError::UnknownDeclaration)?,
                 ),

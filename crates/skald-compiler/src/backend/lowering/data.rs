@@ -3,14 +3,14 @@ use super::LowerError;
 use crate::backend::{
     lir::{DataDefinition, DataInitializer, ProgramBuilder},
     plan::DataInitializerFact,
-    planning::AdmittedProgram,
+    planning::PlannedProgram,
 };
 
 pub(super) fn define(
-    admitted: &AdmittedProgram<'_>,
+    planned: &PlannedProgram<'_>,
     worklist: &mut ProgramBuilder<'_>,
 ) -> Result<(), LowerError> {
-    for fact in &admitted.plan().view().resources().data {
+    for fact in &planned.plan().view().resources().data {
         let initializers = fact
             .initializers
             .iter()

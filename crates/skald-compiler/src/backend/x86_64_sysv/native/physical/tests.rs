@@ -7,7 +7,7 @@ use crate::backend::{
     frame::{plan_frame, FramePolicy, ReturnAddress},
     lir::TargetDeclarations,
     lowering::lower_program,
-    planning::admit,
+    planning::plan_program,
     selected::SelectedProgramBuilder,
     BackendInput,
 };
@@ -64,8 +64,8 @@ pub(super) fn complete(
     } else {
         BackendInput::without_runtime_trace(&fixture.mir)
     };
-    let admitted = admit(input).unwrap();
-    let catalog = TargetDeclarations::new(admitted.plan().view())
+    let planned = plan_program(input).unwrap();
+    let catalog = TargetDeclarations::new(planned.plan().view())
         .freeze()
         .unwrap();
     let context = selection_context(&catalog).unwrap();
@@ -123,7 +123,7 @@ pub(super) fn complete(
         },
         external_symbols.clone(),
     ));
-    let parent = lower_program(&admitted, |lower| {
+    let parent = lower_program(&planned, |lower| {
         let selected = select(&context, &lower).unwrap();
         selected_program
             .complete(&selected, &selected.receipt())

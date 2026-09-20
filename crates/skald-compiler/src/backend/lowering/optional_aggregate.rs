@@ -698,7 +698,7 @@ impl<'plan> Lowerer<'plan, '_> {
         LowerError,
     > {
         let class = self
-            .admitted
+            .planned
             .program()
             .class(class)
             .ok_or(PlanError::UnknownDeclaration)?;

@@ -3,7 +3,7 @@ use crate::{
         lir::{CallTarget, Operation},
         lowering::lower_program,
         plan::{ArtifactId, Coordinator, DataKey, LirCallableId, StaticStorageDisposition},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -26,14 +26,14 @@ fn lifecycle_source() -> &'static str {
 fn coordinators_close_exact_static_dependencies_and_wrap_the_entry() {
     let fixture =
         lower_source_to_complete_final_mir_with_sources("static-lifecycle.ska", lifecycle_source());
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let resources = admitted.plan().view().resources();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let resources = planned.plan().view().resources();
     assert!(!resources.activation.is_empty());
     assert_eq!(resources.activation.len(), resources.shutdown.len());
 
     let mut entry_calls = Vec::new();
     let mut coordinators = 0;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         match body.receipt().owner().key() {
             LirCallableId::Entry => {
                 for (_, block) in body.draft().blocks() {
@@ -77,8 +77,8 @@ fn complete_mode_materializes_inactive_static_storage_without_lifecycle_work() {
             "fn main()->i64{return State.live+2;}"
         ),
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let inactive = admitted
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let inactive = planned
         .plan()
         .view()
         .resources()
@@ -86,14 +86,14 @@ fn complete_mode_materializes_inactive_static_storage_without_lifecycle_work() {
         .iter()
         .find(|fact| fact.disposition == StaticStorageDisposition::RetainedInactive)
         .unwrap();
-    assert!(admitted
+    assert!(planned
         .plan()
         .view()
         .resources()
         .activation
         .iter()
         .all(|fact| fact.field != inactive.field));
-    assert!(admitted
+    assert!(planned
         .plan()
         .view()
         .resources()
@@ -101,7 +101,7 @@ fn complete_mode_materializes_inactive_static_storage_without_lifecycle_work() {
         .iter()
         .all(|fact| fact.field != inactive.field));
 
-    let program = lower_program(&admitted, |_| Ok(())).unwrap();
+    let program = lower_program(&planned, |_| Ok(())).unwrap();
     assert!(program
         .data()
         .any(|definition| definition.key == DataKey::Static(inactive.field)));

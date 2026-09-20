@@ -3,7 +3,7 @@ use crate::{
         lir::{CallTarget, Operation},
         lowering::lower_program,
         plan::{ArtifactId, HelperFamily, LirCallableId},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -20,12 +20,13 @@ fn nested_optional_copy_and_cleanup_close_the_lowered_worklist() {
             "return copy!!+copied!!.marker;}"
         ),
     );
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
-            .unwrap();
+    let planned = plan_program(
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    )
+    .unwrap();
     let mut source_blocks = 0;
     let mut optional_box_finalizers = 0;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         match body.receipt().owner().key() {
             LirCallableId::Source(_) => source_blocks += body.draft().blocks().count(),
             LirCallableId::Helper(key) if key.family == HelperFamily::OptionalBoxFinalizer => {
@@ -41,7 +42,7 @@ fn nested_optional_copy_and_cleanup_close_the_lowered_worklist() {
     assert_eq!(optional_box_finalizers, 0);
     assert_eq!(
         program.receipts().count(),
-        admitted.plan().view().callables().count()
+        planned.plan().view().callables().count()
     );
 }
 
@@ -54,9 +55,9 @@ fn exact_optional_box_finalizer_uses_the_ordinary_recursive_worklist() {
             "fn main()->i64{var box:shared Value?=new Value?(Value());return 0;}"
         ),
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     let mut found = false;
-    lower_program(&admitted, |body| {
+    lower_program(&planned, |body| {
         let LirCallableId::Helper(key) = body.receipt().owner().key() else {
             return Ok(());
         };

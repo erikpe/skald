@@ -3,7 +3,7 @@ use crate::{
         lir::{CallAttribution, CallTarget, Constant, Operation, Terminator},
         lowering::lower_program,
         plan::{DataKey, DataPurpose, RuntimeService},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     mir::test_fixtures::io_program_with_app_and_additional_bodies,
@@ -21,8 +21,8 @@ fn repeated_and_empty_literals_share_immortal_typed_data() {
         "",
     ))
     .unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&program)).unwrap();
-    let resources = admitted.plan().view().resources();
+    let planned = plan_program(BackendInput::without_runtime_trace(&program)).unwrap();
+    let resources = planned.plan().view().resources();
     let repeated = program
         .program()
         .literal_data
@@ -46,7 +46,7 @@ fn repeated_and_empty_literals_share_immortal_typed_data() {
     );
 
     let mut saw_literal_address = false;
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         saw_literal_address |= body.draft().blocks().any(|(_, block)| {
             block.instructions.iter().any(|instruction| {
                 matches!(
@@ -80,10 +80,10 @@ fn all_standard_io_operations_use_ordered_nonreporting_runtime_calls() {
     ))
     .unwrap();
     {
-        let admitted = admit(BackendInput::without_runtime_trace(&program))
-            .expect("the complete standard-I/O intrinsic surface is admitted");
+        let planned = plan_program(BackendInput::without_runtime_trace(&program))
+            .expect("the complete standard-I/O intrinsic surface is planned");
         let mut observed = std::collections::BTreeSet::new();
-        lower_program(&admitted, |body| {
+        lower_program(&planned, |body| {
             for (_, block) in body.draft().blocks() {
                 for instruction in &block.instructions {
                     let Operation::Call(call) = &instruction.operation else {
@@ -135,11 +135,11 @@ fn io_buffers_keep_empty_and_partial_range_control_flow() {
         "import std::io; fn main()->i64{var bytes:u8[]=u8[](2u);return std::io::exercise(1,bytes);}",
         "public fn exercise(handle:i64,mut ref bytes:u8[])->i64{var offset:u64=1u;var read:i64=_io_read(handle,bytes,offset);return read+_io_write(handle,bytes,offset);}",
     )).unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&program)).unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&program)).unwrap();
     let mut branches = 0;
     let mut subtracts = 0;
     let mut nulls = 0;
-    lower_program(&admitted, |body| {
+    lower_program(&planned, |body| {
         for (_, block) in body.draft().blocks() {
             branches += usize::from(matches!(block.terminator, Some(Terminator::Branch { .. })));
             for instruction in &block.instructions {
@@ -170,8 +170,8 @@ fn source_panic_uses_the_checked_string_slice_and_source_attribution() {
         "",
     ))
     .unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&program)).unwrap();
-    assert!(admitted.plan().view().resources().data.iter().any(|data| {
+    let planned = plan_program(BackendInput::without_runtime_trace(&program)).unwrap();
+    assert!(planned.plan().view().resources().data.iter().any(|data| {
         data.purpose == DataPurpose::LiteralBacking
             && data.initializers.iter().any(|initializer| {
                 matches!(initializer, crate::backend::plan::DataInitializerFact::Bytes(bytes) if bytes == expected)
@@ -179,7 +179,7 @@ fn source_panic_uses_the_checked_string_slice_and_source_attribution() {
     }));
 
     let mut saw_panic = false;
-    lower_program(&admitted, |body| {
+    lower_program(&planned, |body| {
         for (_, block) in body.draft().blocks() {
             let Some(Terminator::NonReturningCall(call)) = &block.terminator else {
                 continue;

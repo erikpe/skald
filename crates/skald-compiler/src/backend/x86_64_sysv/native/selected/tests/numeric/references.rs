@@ -230,16 +230,16 @@ fn normalized_bit_intrinsics_preserve_nan_payloads_and_signed_zero() {
     assert!(checked.diagnostics.is_empty());
     let mir = crate::test_support::lower_hir_to_final_mir(&checked.hir.unwrap());
     let mir = crate::passes::run_mir_pipeline(mir).unwrap();
-    let admitted = admit(
+    let planned = plan_program(
         crate::backend::BackendInput::without_runtime_trace(&mir).with_reachable_artifacts_only(),
     )
     .unwrap();
-    let catalog = TargetDeclarations::new(admitted.plan().view())
+    let catalog = TargetDeclarations::new(planned.plan().view())
         .freeze()
         .unwrap();
     let context = selection_context(&catalog).unwrap();
     let mut tested = 0;
-    crate::backend::lowering::lower_program(&admitted, |lower| {
+    crate::backend::lowering::lower_program(&planned, |lower| {
         let bit_conversion = lower
             .draft()
             .blocks()

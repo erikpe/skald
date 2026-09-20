@@ -4,14 +4,14 @@ use super::{
     layouts::collect_types,
     signatures::{declaration_inventory, intern_source_signature, signature, unit_signature},
 };
-use super::{AdmissionError, AdmittedProgram};
+use super::{PlannedProgram, PlanningError};
 use crate::backend::{plan::*, x86_64_sysv, BackendInput};
 use crate::mir::*;
 use std::collections::BTreeMap;
 
-pub(in crate::backend) fn admit(
+pub(in crate::backend) fn plan_program(
     input: BackendInput<'_>,
-) -> Result<AdmittedProgram<'_>, AdmissionError> {
+) -> Result<PlannedProgram<'_>, PlanningError> {
     let program = input.program();
     let mut facts = PlanFacts {
         profile: TargetProfile {
@@ -225,7 +225,7 @@ pub(in crate::backend) fn admit(
     )?;
     super::resources::project(input, &layouts, &trace, &mut facts)?;
     let plan = CheckedPlan::check(facts)?;
-    Ok(AdmittedProgram {
+    Ok(PlannedProgram {
         program,
         plan,
         layouts,
@@ -238,14 +238,14 @@ pub(in crate::backend) fn admit(
 #[cfg(test)]
 pub(super) fn project_semantic_catalog(
     input: BackendInput<'_>,
-) -> Result<CheckedPlan, AdmissionError> {
+) -> Result<CheckedPlan, PlanningError> {
     project_test_catalog(input, false)
 }
 
 #[cfg(test)]
 pub(in crate::backend) fn project_resource_catalog(
     input: BackendInput<'_>,
-) -> Result<CheckedPlan, AdmissionError> {
+) -> Result<CheckedPlan, PlanningError> {
     project_test_catalog(input, true)
 }
 
@@ -253,7 +253,7 @@ pub(in crate::backend) fn project_resource_catalog(
 fn project_test_catalog(
     input: BackendInput<'_>,
     include_resources: bool,
-) -> Result<CheckedPlan, AdmissionError> {
+) -> Result<CheckedPlan, PlanningError> {
     let program = input.program();
     let types = collect_types(program);
     let (layouts, projection) = x86_64_sysv::begin_semantic_projection(input, &types)?;
@@ -336,5 +336,5 @@ fn project_test_catalog(
         let trace = x86_64_sysv::project_trace(input)?;
         super::resources::project(input, &type_layouts, &trace, &mut facts)?;
     }
-    CheckedPlan::check(facts).map_err(AdmissionError::from)
+    CheckedPlan::check(facts).map_err(PlanningError::from)
 }

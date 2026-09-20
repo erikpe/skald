@@ -6,14 +6,14 @@ use crate::backend::{
         VerifiedCallable,
     },
     plan::{ArtifactId, CallableBinding, LirCallableId, PlanError, RuntimeService},
-    planning::AdmittedProgram,
+    planning::PlannedProgram,
 };
 
 pub(super) fn lower<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let mut builder = DraftBuilder::new(owner)?;
     let entry = builder.reserve_block()?;
@@ -36,7 +36,7 @@ pub(super) fn lower<'plan>(
         &mut builder,
         entry,
         ArtifactId::Callable(LirCallableId::Source(
-            admitted.program().entry_function.into(),
+            planned.program().entry_function.into(),
         )),
     )?;
     let finalizer = ArtifactId::Callable(LirCallableId::Coordinator(

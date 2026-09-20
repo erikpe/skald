@@ -28,10 +28,10 @@ mod strings;
 mod trace;
 mod worklist;
 
-#[cfg_attr(not(test), allow(unused_imports))]
 pub(in crate::backend) use error::LowerError;
-#[cfg_attr(not(test), allow(unused_imports))]
-pub(in crate::backend) use worklist::{lower_next, lower_program, lower_program_with};
+pub(in crate::backend) use worklist::lower_program_with;
+#[cfg(test)]
+pub(in crate::backend) use worklist::{lower_next, lower_program};
 
 #[cfg(test)]
 mod tests;

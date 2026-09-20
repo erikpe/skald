@@ -6,7 +6,7 @@ use crate::backend::{
 };
 use std::collections::BTreeSet;
 /// Immediate constants need no data artifact. Failure/source bytes already have
-/// canonical shared keys. The admitted pilot is ABI compatible and needs no thunk.
+/// canonical shared keys. The private pipeline is ABI compatible and needs no thunk.
 pub(in crate::backend) fn requests(
     body: &VerifiedCallable<'_>,
 ) -> Result<BTreeSet<ArtifactId>, SelectionError> {

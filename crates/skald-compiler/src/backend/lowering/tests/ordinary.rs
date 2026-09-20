@@ -6,7 +6,7 @@ use crate::{
         },
         lowering::{lower_next, LowerError},
         plan::{DataInitializerFact, DataKey, LirCallableId},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -15,9 +15,9 @@ use crate::{
 #[test]
 fn source_loop_publishes_with_semantic_memory_and_exact_worklist_receipt() {
     let fixture = lower_source_to_complete_final_mir_with_sources("scalar.ska", "fn main() -> i64 { var sum: i64 = 0; var n: i64 = 0; while (n < 3) { sum = sum + n; n = n + 1; } return sum; }");
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
     let draft = body.draft();
     assert_eq!(
         draft.blocks().len(),
@@ -52,20 +52,20 @@ fn frozen_data_recipes_are_reconciled_exactly_without_retaining_drafts() {
         "data.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    while lower_next(&admitted, &mut worklist).unwrap().is_some() {}
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    while lower_next(&planned, &mut worklist).unwrap().is_some() {}
 
-    let first = &admitted.plan().view().resources().data[0];
+    let first = &planned.plan().view().resources().data[0];
     assert_eq!(
         worklist.define_data(DataDefinition {
             key: first.key,
             initializers: vec![DataInitializer::Zero(
-                admitted
+                planned
                     .plan()
                     .view()
                     .layout(
-                        admitted
+                        planned
                             .plan()
                             .view()
                             .layout_id(first.layout.index())
@@ -78,7 +78,7 @@ fn frozen_data_recipes_are_reconciled_exactly_without_retaining_drafts() {
         Err(ProgramError::InvalidInitializer)
     );
 
-    for fact in &admitted.plan().view().resources().data {
+    for fact in &planned.plan().view().resources().data {
         let initializers = fact
             .initializers
             .iter()
@@ -109,7 +109,7 @@ fn frozen_data_recipes_are_reconciled_exactly_without_retaining_drafts() {
             .data()
             .map(|definition| definition.key)
             .collect::<Vec<DataKey>>(),
-        admitted
+        planned
             .plan()
             .view()
             .resources()
@@ -126,9 +126,9 @@ fn generated_completion_receipts_must_match_frozen_dependencies() {
         "generated.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    assert!(lower_next(&admitted, &mut worklist).unwrap().is_some());
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    assert!(lower_next(&planned, &mut worklist).unwrap().is_some());
     let owner = worklist.begin(LirCallableId::Entry).unwrap();
     let mut builder = DraftBuilder::new(owner).unwrap();
     let entry = builder.reserve_block().unwrap();
@@ -160,12 +160,12 @@ fn primitive_predicates_keep_their_semantic_types_and_parameter_memory() {
     }
     source.push_str("fn arithmetic(a: i64, b: i64) -> i64 { return ~(-a) + (a * b - b) & (a | b ^ a); } fn floating(a: f64, b: f64) -> f64 { return -a + a * b - a / b; } fn boolean(a: bool) -> bool { return !a; }");
     let fixture = lower_source_to_complete_final_mir_with_sources("predicates.ska", &source);
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
     let mut comparisons = vec![];
     let mut bodies = 0;
     while worklist.next() != Some(LirCallableId::Entry) {
-        let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+        let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
         let draft = body.draft();
         bodies += 1;
         for (_, block) in draft.blocks() {
@@ -251,9 +251,9 @@ fn sparse_retention_does_not_resurrect_removed_bodies() {
     let sparse =
         crate::passes::verify_final_mir(retention.apply(fixture.mir.program().clone()).program)
             .unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&sparse)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&sparse)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
     let source = sparse.program().definitions.iter().next().unwrap();
     assert_ne!(source.function.index(), 0);
     assert_eq!(
@@ -277,9 +277,9 @@ fn final_publication_rejects_undefined_return_values_and_unfinished_blocks() {
         "malformed.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let worklist = ProgramBuilder::new(admitted.plan().view());
-    let owner = admitted
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let worklist = ProgramBuilder::new(planned.plan().view());
+    let owner = planned
         .plan()
         .view()
         .callable(worklist.next().unwrap())
@@ -358,9 +358,9 @@ fn duplicate_edges_and_unreachable_retained_blocks_survive_publication() {
         });
     }
     let sealed = crate::passes::verify_final_mir(program).unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&sealed)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
-    let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&sealed)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
+    let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
     let graph = body.analysis().unwrap();
     assert_eq!(graph.successors(0), Some([1, 1].as_slice()));
     assert_eq!(graph.predecessors(1), Some([(0, 0), (0, 1)].as_slice()));
@@ -401,13 +401,13 @@ fn callable_addresses_are_canonical_and_float_constants_keep_raw_bits() {
         }
     }
     let sealed = crate::passes::verify_final_mir(program).unwrap();
-    let admitted = admit(BackendInput::without_runtime_trace(&sealed)).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    let planned = plan_program(BackendInput::without_runtime_trace(&sealed)).unwrap();
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
     let mut address = false;
     let mut float = false;
     let mut byte_accesses = 0;
     while worklist.next() != Some(LirCallableId::Entry) {
-        let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+        let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
         for (_, block) in body.draft().blocks() {
             for instruction in &block.instructions {
                 match instruction.operation {
@@ -416,7 +416,7 @@ fn callable_addresses_are_canonical_and_float_constants_keep_raw_bits() {
                         ty: ScalarType::CodeAddress(signature),
                     } => {
                         assert_eq!(
-                            admitted
+                            planned
                                 .plan()
                                 .view()
                                 .callables()
@@ -456,15 +456,15 @@ fn foreign_plans_cannot_publish_and_enabled_tracing_publishes() {
         "context.ska",
         "fn main() -> i64 { return 0; }",
     );
-    let admitted = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
-    let other = admit(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let planned = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
+    let other = plan_program(BackendInput::without_runtime_trace(&fixture.mir)).unwrap();
     let mut foreign = ProgramBuilder::new(other.plan().view());
     assert!(matches!(
-        lower_next(&admitted, &mut foreign),
+        lower_next(&planned, &mut foreign),
         Err(LowerError::Plan(_))
     ));
     assert!(foreign.finish().is_err());
-    let tracing = admit(BackendInput::with_runtime_trace(
+    let tracing = plan_program(BackendInput::with_runtime_trace(
         &fixture.mir,
         &fixture.sources,
     ))

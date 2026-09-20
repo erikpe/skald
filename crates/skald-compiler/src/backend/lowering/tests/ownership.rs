@@ -4,7 +4,7 @@ use crate::{
         lir::{CallAttribution, CallTarget, Constant, Operation, Terminator},
         lowering::lower_program,
         plan::{ArtifactId, DataKey, HelperFamily, LirCallableId, RuntimeService},
-        planning::admit,
+        planning::plan_program,
         BackendInput,
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -22,14 +22,15 @@ fn generated_owner_helpers_cover_boundaries_and_preserve_the_original_allocation
             "holder=holder;return holder.edge->value;}",
         ),
     );
-    let admitted =
-        admit(BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only())
-            .unwrap();
+    let planned = plan_program(
+        BackendInput::without_runtime_trace(&fixture.mir).with_reachable_artifacts_only(),
+    )
+    .unwrap();
     let mut retain_seen = false;
     let mut release_seen = false;
     let mut retain_before_release = false;
 
-    let program = lower_program(&admitted, |body| {
+    let program = lower_program(&planned, |body| {
         let owner = body.receipt().owner().key();
         if let LirCallableId::Helper(key) = owner {
             match key.family {

@@ -100,10 +100,10 @@ pub enum RuntimeTracePolicy {
 /// use skald_compiler::backend::selected::SelectedDraft;
 /// ```
 ///
-/// Admission and shared lowering orchestration remain compiler-private:
+/// Checked planning and shared lowering orchestration remain compiler-private:
 ///
 /// ```compile_fail
-/// use skald_compiler::backend::planning::AdmittedProgram;
+/// use skald_compiler::backend::planning::PlannedProgram;
 /// ```
 ///
 /// ```compile_fail

@@ -12,15 +12,15 @@ use crate::backend::{
         ArtifactId, CallableBinding, ComponentRole, DataKey, HelperFamily, MethodSlot, PlanError,
         PlanView, RuntimeService, ScalarType,
     },
-    planning::AdmittedProgram,
+    planning::PlannedProgram,
 };
 use crate::primitive_comparison::PrimitiveComparisonPredicate;
 
 pub(super) fn lower_retain<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let mut graph = OwnerGraph::new(plan, owner)?;
     let invalid = graph.block()?;
@@ -64,10 +64,10 @@ pub(super) fn lower_retain<'plan>(
 }
 
 pub(super) fn lower_release<'plan>(
-    admitted: &'plan AdmittedProgram<'_>,
+    planned: &'plan PlannedProgram<'_>,
     owner: CallableBinding<'plan>,
 ) -> Result<VerifiedCallable<'plan>, LowerError> {
-    let plan = admitted.plan().view();
+    let plan = planned.plan().view();
     plan.require_same_context(owner.context())?;
     let mut graph = OwnerGraph::new(plan, owner)?;
     let invalid = graph.block()?;

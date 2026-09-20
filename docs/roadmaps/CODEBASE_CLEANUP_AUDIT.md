@@ -127,7 +127,7 @@ narrower endpoint and names any deferred work.
 | [A19](#a19--reuse-analyses-within-an-immutable-mir-snapshot) | Reuse analyses within an immutable MIR snapshot | Complete (bounded) | P2 | 4 | L | High | C | C, M |
 | [A20](#a20--factor-pipeline-observation-bookkeeping) | Factor pipeline observation bookkeeping | Complete | P2 | 3 | M | Medium | O | M, R |
 | [A21](#a21--make-the-shared-mir-traversal-easier-to-navigate) | Make the shared MIR traversal easier to navigate | Complete | P2 | 3 | M | Medium | O | M, E, R |
-| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | In progress; private native pilot complete | P3 | 5 | XL | High | C | N, E |
+| [A22](#a22--introduce-virtual-register-target-ir-when-justified) | Introduce virtual-register target IR when justified | In progress; private native pipeline complete | P3 | 5 | XL | High | C | N, E |
 | [A23](#a23--develop-conservative-shared-effectalias-queries) | Develop conservative shared effect/alias queries | Open | P3 | 5 | XL | High | C | N, E, R |
 | [A24](#a24--cache-provider-directory-listings-per-request) | Cache provider directory listings per request | Open | P2 | 3 | M | Medium | C | C, M |
 | [A25](#a25--use-identity-indexed-lookup-for-resolved-bindings) | Use identity-indexed lookup for resolved bindings | Complete | P2 | 3 | S–M | Low | O | C, M |
@@ -1084,11 +1084,11 @@ The [archived native target design](../archive/TARGET_SELECTION_PHYSICAL_REALIZA
 and [completed roadmap](../archive/TARGET_SELECTION_PHYSICAL_REALIZATION_ROADMAP.md)
 deliver concrete native selection, ABI handling, transfers, checked baseline
 placement, symbolic frames, independently verified physical realization and a
-private whole-program pilot. The accepted
-[complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
-and [active roadmap](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md) define
-whole-program, no-fallback expansion across the remaining language, lifecycle,
-helper, data and artifact surface. Production migration, adoption and allocation
+private whole-program pipeline. The implemented
+[complete lowering migration design](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
+and [archived roadmap](../archive/COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_ROADMAP.md)
+deliver whole-program, no-fallback private parity across the full language,
+lifecycle, helper, data and artifact surface. Production adoption and allocation
 remain pending; preserved measurements grant no cost clearance.
 Scalar promotion and semantic SSA remain separate follow-ups.
 

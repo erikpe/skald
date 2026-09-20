@@ -11,7 +11,7 @@ use crate::{
             ShiftDirection,
         },
         plan::PlanError,
-        planning::AdmittedProgram,
+        planning::PlannedProgram,
     },
     mir::{
         BlockId, MirDefinitionRef, MirInstruction, MirIntegerDivisionKind, MirIntegerType,
@@ -142,13 +142,13 @@ impl<'plan> Lowerer<'plan, '_> {
                     }
                 },
                 value: value(*operand),
-                target: scalar_type(self.admitted, operation.result_type())?,
+                target: scalar_type(self.planned, operation.result_type())?,
                 evidence: None,
             },
             MirRvalueKind::CheckedF64ToInteger { relation, operand } => Operation::Convert {
                 conversion: Conversion::TruncateFloat,
                 value: value(*operand),
-                target: scalar_type(self.admitted, relation.result_type())?,
+                target: scalar_type(self.planned, relation.result_type())?,
                 evidence: Some(evidence()?),
             },
             _ => return Err(PlanError::InvalidDomain.into()),
@@ -181,7 +181,7 @@ impl<'plan> Lowerer<'plan, '_> {
             &[value],
         )?;
         let relation = check_relation(
-            self.admitted,
+            self.planned,
             self.definition.body().blocks[block.index()]
                 .terminator
                 .as_ref()
@@ -197,13 +197,13 @@ impl<'plan> Lowerer<'plan, '_> {
 }
 
 fn check_relation<'p>(
-    admitted: &AdmittedProgram<'_>,
+    planned: &PlannedProgram<'_>,
     terminator: &MirTerminator,
     value: crate::backend::lir::ValueHandle<'p>,
 ) -> Result<ScalarCheck<crate::backend::lir::ValueHandle<'p>>, LowerError> {
     Ok(match terminator {
         MirTerminator::IntegerDivisorCheck { check, .. } => ScalarCheck::NonZeroDivisor {
-            ty: scalar_type(admitted, check.operation.operand_type())?,
+            ty: scalar_type(planned, check.operation.operand_type())?,
             divisor: value,
         },
         MirTerminator::ShiftCountCheck { check, .. } => ScalarCheck::ShiftCountBelowWidth {
@@ -213,7 +213,7 @@ fn check_relation<'p>(
         MirTerminator::PrimitiveCastRangeCheck { check, .. } => {
             ScalarCheck::FiniteTruncatedF64InIntegerRange {
                 source: value,
-                target: scalar_type(admitted, check.relation.result_type())?,
+                target: scalar_type(planned, check.relation.result_type())?,
             }
         }
         _ => return Err(PlanError::InvalidDomain.into()),

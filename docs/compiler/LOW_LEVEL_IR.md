@@ -388,7 +388,7 @@ Hard trap is a separate terminal with no reporter. These terminals have no
 cleanup/unwind edges; target selection exposes the defensive trap if a
 nonreturning callee violates its contract. Explicit data initializers and inventory
 closure are checked during program publication. Native discovery freezes the
-target catalog before executable construction, and the private x86 pilot consumes
+target catalog before executable construction, and the private x86 pipeline consumes
 the resulting lower products.
 
 The shared-release fixture uses ordinary loads/stores and branches for immortal,
@@ -494,7 +494,7 @@ missing-definition, duplicate and foreign-context completions fail.
 
 These APIs permit callable-at-a-time construction before lower-program closure;
 physical closure now retains exact receipts while spooling verified fragments.
-The private x86 pilot reconciles both finalized parents before publishing
+The private x86 pipeline reconciles both finalized parents before publishing
 assembly; production adoption remains planned. The
 supplied catalog remains declaration authority: checks do not rediscover semantic
 reachability, build real helpers or certify production MIR projection.
@@ -594,7 +594,7 @@ There is no default accepting verifier. Synthetic tests demonstrate guard and
 correction graphs, simultaneous edges, secured indirect calls, inherited helper
 attribution, partial resource preservation and receipt binding. They prove the
 shared interface is usable across two target shapes, not physical preservation.
-The private x86 pilot implements concrete opcodes, its ABI catalog, baseline
+The private x86 pipeline implements concrete opcodes, its ABI catalog, baseline
 placement, independent placement acceptance, typed physical realization,
 independent verification and exact program closure.
 [Checked frame planning](FRAME_PLANNING.md) consumes exact checked placement and
@@ -621,9 +621,9 @@ memory-read, call, report, trace-state and hard-trap effects and exact ABI/data
 associations. General native calls, entry and explicit TLS/trace memory selection
 are implemented; see [call and trace publication](X86_NATIVE_CONTRACTS.md#concrete-call-and-trace-publication).
 Shared indirect descriptors accept the target-defined early or late use timing;
-the native verifier requires a secured late target in R11. The private pilot
+the native verifier requires a secured late target in R11. The private pipeline
 executes both direct and secured indirect calls through verified physical code;
-full migration and production adoption remain planned.
+full private migration is complete and production adoption remains planned.
 
 ## Consuming edits and snapshot analyses
 
@@ -634,8 +634,8 @@ completion. Other chosen receipts and data definitions remain intact. Selected
 program edits retain the exact finalized lower parent; even another program
 publication with identical chosen callable receipts cannot replace that bound
 authority. A callable can enter an editor directly only inside its owning phase,
-before program
-admission. No public constructor or mutable published-draft accessor exists.
+before program publication. No public constructor or mutable published-draft
+accessor exists.
 
 Editors replace instruction or terminal uses, redirect individual edge occurrences
 with simultaneous argument lists, split blocks, and rebuild compact arenas in
@@ -700,15 +700,15 @@ reservations; it does not follow potentially invalid references or certify the
 result. Writers receive streaming text and errors propagate normally. These are
 private debugging APIs, not a stable external wire format or importer.
 
-The private native pilot can stream independently requested lowered, selected,
+The private native pipeline can stream independently requested lowered, selected,
 physical, placement and frame checkpoints from their verified owners. A quiet
-pilot supplies no writer and performs no rendering or observation bookkeeping.
-Writer failure stops the pilot before complete-program publication. Checkpoint
+run supplies no writer and performs no rendering or observation bookkeeping.
+Writer failure stops the pipeline before complete-program publication. Checkpoint
 text remains deterministic diagnostic output rather than a stable wire format.
 
 Production phase events, public dump adapters and requested metrics remain an
 architecture-adoption obligation. Current CLI dumps still observe the existing production
-compiler. The private pilot fabricates no public stage event, adds no CLI switch
+compiler. The private pipeline fabricates no public stage event, adds no CLI switch
 and makes no native performance claim.
 
 ## Regression ownership

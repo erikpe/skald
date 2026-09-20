@@ -1,14 +1,14 @@
 # Complete Low-Level Lowering Migration Roadmap
 
-Status: active; LM01–LM18 are complete and LM19 is next.
+Status: complete; archived on 2026-09-20 after LM01–LM19.
 Implementation baseline: `9e6177fe`, the committed roadmap immediately before
 implementation began. The accepted
 [complete lowering migration design](COMPLETE_LOW_LEVEL_LOWERING_MIGRATION_DESIGN_PROPOSAL.md)
 is committed as `a099d228`.
 Parent program:
-[Low-Level Compiler Architecture](LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
+[Low-Level Compiler Architecture](../roadmaps/LOW_LEVEL_COMPILER_ARCHITECTURE_DESIGN_PROPOSAL.md).
 Exhaustive handoff:
-[Low-Level Compiler Migration Coverage](LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
+[Low-Level Compiler Migration Coverage](../roadmaps/LOW_LEVEL_COMPILER_MIGRATION_COVERAGE.md).
 
 This roadmap expands the checked private native pilot into a complete
 full-language x86-64 path. It preserves the production legacy backend as the
@@ -56,7 +56,7 @@ per-callable or per-operation fallback.
 - [x] LM16 — Lower static lifecycle and complete entry orchestration
 - [x] LM17 — Complete trace, data and artifact closure parity
 - [x] LM18 — Reconcile exhaustive private parity and measurements
-- [ ] LM19 — Cumulative review, cleanup and LA05 handoff
+- [x] LM19 — Cumulative review, cleanup and LA05 handoff
 
 ## PR-sized implementation sequence
 
@@ -659,18 +659,18 @@ valid paired candidate capture after introducing its reviewed selection boundary
 **Purpose:** review the complete roadmap diff as one architecture change and
 leave no hidden migration residue before production adoption.
 
-- [ ] Review `git diff 9e6177fe..HEAD`, committed task history, and all staged,
+- [x] Review `git diff 9e6177fe..HEAD`, committed task history, and all staged,
   unstaged and untracked changes against the frozen design and coverage record.
-- [ ] Reconcile every artifact-ledger entry; remove expired aliases, gates,
+- [x] Reconcile every artifact-ledger entry; remove expired aliases, gates,
   adapters, allowances, duplicate implementations, stale pilot names/comments
   and exploratory instrumentation.
-- [ ] Retain only the thin private native entry, legacy production backend,
+- [x] Retain only the thin private native entry, legacy production backend,
   focused parity evidence and explicit LA05-owned observation/adoption artifacts.
-- [ ] Review AArch64 portability, phase dependencies, public visibility, errors,
+- [x] Review AArch64 portability, phase dependencies, public visibility, errors,
   deterministic inspection and complete/reachable closure holistically.
-- [ ] Run artifact-free repository, long golden/robustness/runtime, MSRV and
+- [x] Run artifact-free repository, long golden/robustness/runtime, MSRV and
   documentation gates; record baseline, endpoint and validation evidence.
-- [ ] Mark this roadmap complete, freeze its final handoff, archive it and its
+- [x] Mark this roadmap complete, freeze its final handoff, archive it and its
   design, update all indexes/links, and make LA05 design the next program step.
 
 **Tests:** all LM18 gates from a clean snapshot plus documentation/link checks,
@@ -679,6 +679,33 @@ whitespace/diff checks and targeted searches for ledgered/stale artifacts.
 **Exit criteria:** the accepted LA04 design is fully implemented, the cumulative
 change is reviewable and clean, all roadmap/coverage checkboxes are reconciled,
 and only explicitly transferred LA05 work remains.
+
+Closing review uses implementation baseline `9e6177fe`, committed task endpoint
+`07f77e6d`, and the LM19 working tree that awaits the user's closing commit.
+The cumulative committed change spans 123 paths, with 19,568 insertions and
+2,184 deletions before closing cleanup. Review replaced the obsolete
+admission-era `AdmittedProgram`, `AdmissionError`, `admit` and
+`compile_admitted` vocabulary with checked planning names throughout the
+implementation and tests. Test-only convenience entry points are now compiled
+only for tests, and the first-pass request discovery product is named for its
+continuing purpose rather than as exploratory work.
+
+Shared lowering has no target register, stack-slot, physical-instruction or
+frontend dependency. Checked planning delegates only semantic layout and trace
+projection to the x86 target owner; the plan schema retains its synthetic
+AArch64 profile checks. Exact parent receipts, independent verification,
+requested-only deterministic inspection, and complete/reachable closure remain
+intact. The private native entry, its production-dead allowances, the legacy
+production backend and focused parity matrix transfer explicitly to LA05. The
+two measured baseline-placement cost risks remain active, indexed adoption
+inputs and must be resolved or explicitly accepted before production selection.
+
+`make check-long` passed on the closing working tree: formatting, workspace
+all-target checks, Clippy with warnings denied, documentation validation, 3,516
+compiler unit tests, runtime tests, 650 full-determinism golden leaves, 650
+release golden leaves, Rust 1.82, 10,000 robustness cases, panic-trace and generic
+vector measurements, and range-loop targets. Final formatting, documentation,
+whitespace, status and cumulative-diff checks passed after archival edits.
 
 ## Ordering and dependencies
 
@@ -707,15 +734,15 @@ continuing purpose and explicit removal owner.
 | Artifact | Introduced | Removal owner | Current disposition |
 | --- | --- | --- | --- |
 | Shared `backend::pilot` projection/admission/lowering names | LA03 commits through `8f8c1825` | LM01 | Removed in LM01: admission/fact projection are owned by `backend::planning`, lowering by `backend::lowering`, and target fact adapters use semantic names |
-| `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | Consuming LM02–LM17 tasks; residual facade allowance LA05 | Retained only for the private planned product, checked projection errors and trace facts while production remains legacy |
-| `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | Consuming LM05–LM17 tasks; residual facade allowance LA05 | Retained only for private checked lowering entries while production still uses legacy emission |
+| `backend::planning::{mod,facts}` non-test unused/dead-code allowances | NP03, `879bfb47`; renamed LM01 | LA05 adoption | Reconciled in LM19: retained only for the private planned product, checked projection errors and trace facts while production remains legacy |
+| `backend::lowering::{mod,worklist}` non-test unused/dead-code allowances | NP04 `a4c3f189`, streaming entry NP17 `2d252cc3`; renamed LM01 | LA05 adoption | Reconciled in LM19: the test convenience entry is `cfg(test)` and production retains only the fallible streaming entry used by the private pipeline |
 | `x86_64_sysv::fact_projection` non-test function allowances | NP03, `879bfb47`; renamed LM01; semantic catalog expanded LM02 and resource consumers added LM03 | Residual root allowance LA05 | Retained target-owned semantic layout/dispatch and trace projection; legacy planner types do not escape into the checked plan |
 | `plan::ResourceFacts` and `planning::resources` complete resource catalog | LM03, `dbada8c6`; audited LM04 | Executable consumers LM05–LM17 | Retain as the checked owner of static dispositions/lifecycle, typed data, runtime/generated declarations and artifact roots; complete-mode inactive storage is physical-only and all-zero |
 | Eager complete-mode `RawClassCopy` declarations for every class | LM03, `dbada8c6` | LM09 | Removed in LM09: raw-address wrappers are array-element machinery and will acquire roots from their actual array-helper consumers |
-| Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Retain through LM19 as the explicit private parity entry; ordinary emission cannot reach it |
-| `native::pilot::pipeline::compile_admitted` post-admission seam | LM01, `51cb4f75` | LA05 adoption | Retain as the single private continuation used by compilation and the terminal post-admission failure regression; it has no legacy callback |
+| Thin `x86_64_sysv::native::pilot` entry/error/inspection adapter and native-facade allowances | NP17 `2d252cc3`, observation NP18; reviewed through `8f8c1825` | LA05 adoption | Reconciled and retained as the explicit private parity entry; ordinary emission cannot reach it |
+| `native::pilot::pipeline::compile_planned` post-planning seam | LM01, `51cb4f75`; renamed LM19 | LA05 adoption | Retained as the single private continuation used by compilation and the terminal post-planning failure regression; it has no legacy callback |
 | Feature admission allowlist and structured unsupported reasons | NP03–NP06, reviewed through `8f8c1825`; renamed LM01 | LM18 | Removed in LM18: checked planning projects the complete retained program and errors are owned by the phase that detects them |
-| Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LM19/LA05 | Retain focused admission, post-admission failure, dump, native and policy regressions; remove broad duplicates during cumulative review/adoption |
+| Legacy/new differential and forced-new-path fixtures | NP17–NP19 through `8f8c1825`; extended LM01 | LA05 adoption | Reconciled in LM19: retain the focused planning, post-planning failure, dump, native and policy matrix as durable parity evidence; LA05 removes the private gate when production selection owns the path |
 | Legacy x86 lowering/frame/machine/emitter | Pre-program production backend | LA05 adoption | Preserve unchanged as default and parity oracle during LA04 |
 
 ## Required documentation updates

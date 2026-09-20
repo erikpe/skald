@@ -6,7 +6,7 @@ use crate::{
         lir::{self, ProgramBuilder, TargetDeclarations},
         lowering::lower_next,
         plan::{self, LirCallableId},
-        planning::admit,
+        planning::plan_program,
         selected::{self, Bundle, Constraint, Payload, SelectedFact, TargetVerifier, Timing},
     },
     test_support::lower_source_to_complete_final_mir_with_sources,
@@ -17,17 +17,17 @@ fn for_sources(
     mut check: impl for<'p> FnMut(&'p selected::SelectionContext<'p>, &lir::VerifiedCallable<'p>),
 ) {
     let fixture = lower_source_to_complete_final_mir_with_sources("native.ska", source);
-    let admitted = admit(crate::backend::BackendInput::without_runtime_trace(
+    let planned = plan_program(crate::backend::BackendInput::without_runtime_trace(
         &fixture.mir,
     ))
     .unwrap();
-    let catalog = TargetDeclarations::new(admitted.plan().view())
+    let catalog = TargetDeclarations::new(planned.plan().view())
         .freeze()
         .unwrap();
     let context = selection_context(&catalog).unwrap();
-    let mut worklist = ProgramBuilder::new(admitted.plan().view());
+    let mut worklist = ProgramBuilder::new(planned.plan().view());
     while worklist.next() != Some(LirCallableId::Entry) {
-        let body = lower_next(&admitted, &mut worklist).unwrap().unwrap();
+        let body = lower_next(&planned, &mut worklist).unwrap().unwrap();
         check(&context, &body);
     }
 }

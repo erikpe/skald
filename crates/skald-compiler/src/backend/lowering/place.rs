@@ -139,7 +139,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let layout = self.plan().layout(self.plan().layout_id(layout.index())?)?;
         let mir_ty = semantic_mir_type(ty).ok_or(PlanError::InvalidSignature)?;
         Ok(MemoryRepresentation {
-            scalar: scalar_type(self.admitted, mir_ty)?,
+            scalar: scalar_type(self.planned, mir_ty)?,
             bytes: layout.size,
             alignment: layout.alignment,
         })
@@ -149,7 +149,7 @@ impl<'plan> Lowerer<'plan, '_> {
         let mut ty = match place.base {
             MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
                 semantic_type(
-                    self.admitted
+                    self.planned
                         .program()
                         .static_field(field)
                         .ok_or(PlanError::UnknownDeclaration)?
@@ -222,7 +222,7 @@ impl<'plan> Lowerer<'plan, '_> {
         match base {
             MirPlaceBase::StaticField(field) | MirPlaceBase::StaticLifecycleDestination(field) => {
                 let ty = self
-                    .admitted
+                    .planned
                     .program()
                     .static_field(field)
                     .ok_or(PlanError::UnknownDeclaration)?

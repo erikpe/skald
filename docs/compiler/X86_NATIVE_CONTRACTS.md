@@ -110,8 +110,9 @@ signature-qualified code addresses and aligned, bounded object accesses proven
 from concrete address definitions and incoming edges. Lifetime markers retain a
 finite site count. Invalid representations, slots and recipe metadata yield
 errors; describing malformed opcodes remains total. Static memory provenance,
-pointer conversion/scaled-address recipes outside the pilot, and ABI thunks
-reject explicitly. Production continues through the existing backend.
+pointer conversion/scaled-address recipes not requested by checked source
+lowering, and ABI thunks reject explicitly. Production continues through the
+existing backend.
 
 Incoming/outgoing/result slot shapes belong to each checked signature within one
 selection context. The same slot index can therefore represent integer bits in
@@ -268,7 +269,7 @@ remain mandatory on calls under either policy.
 Pure request collection reads the authenticated lower receipt. Immediate integer
 and binary64 constants need no additional data artifact; failure/source bytes use
 canonical shared keys. Selection requires frozen catalog authority and rejects
-any concrete reference outside its discovered set. The ABI-compatible pilot
+any concrete reference outside its discovered set. The ABI-compatible private pipeline
 requires no thunks and rejects every thunk form explicitly. Whole-program selected
 closure reconciles exact lower receipts after callable bodies are released.
 These witnesses establish selected publication; physical marshaling, TLS encoding

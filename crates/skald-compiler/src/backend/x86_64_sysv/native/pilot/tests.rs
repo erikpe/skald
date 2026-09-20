@@ -615,7 +615,7 @@ fn requested_checkpoints_are_independent_deterministic_and_quiet_by_default() {
 }
 
 #[test]
-fn post_admission_observation_failure_is_terminal() {
+fn post_planning_observation_failure_is_terminal() {
     struct FailingWriter;
     impl fmt::Write for FailingWriter {
         fn write_str(&mut self, _: &str) -> fmt::Result {
@@ -624,24 +624,24 @@ fn post_admission_observation_failure_is_terminal() {
     }
 
     let fixture = fixture(MirMode::Default, "fn main()->i64{return 23;}");
-    let admitted =
-        crate::backend::planning::admit(fixture.backend_input(RuntimeTracePolicy::Omitted))
-            .expect("fixture must cross the whole-program admission boundary");
-    let error = super::pipeline::compile_admitted(
-        &admitted,
+    let planned =
+        crate::backend::planning::plan_program(fixture.backend_input(RuntimeTracePolicy::Omitted))
+            .expect("fixture must cross the whole-program planning boundary");
+    let error = super::pipeline::compile_planned(
+        &planned,
         super::NativePilotInspection {
             lowered: true,
             ..Default::default()
         },
         Some(&mut FailingWriter),
     )
-    .expect_err("post-admission failure must remain terminal");
+    .expect_err("post-planning failure must remain terminal");
 
     assert!(matches!(error, super::NativePilotError::Observation(_)));
 }
 
 #[test]
-fn private_pilot_artifact_and_checkpoints_are_deterministic_across_processes() {
+fn private_pipeline_artifact_and_checkpoints_are_deterministic_across_processes() {
     const CHILD: &str = "SKALD_NATIVE_PILOT_DETERMINISM_CHILD";
     const BEGIN: &str = "NATIVE-PILOT-BEGIN\n";
     const END: &str = "NATIVE-PILOT-END\n";
@@ -669,7 +669,7 @@ fn private_pilot_artifact_and_checkpoints_are_deterministic_across_processes() {
         let output = Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
-                "backend::x86_64_sysv::native::pilot::tests::private_pilot_artifact_and_checkpoints_are_deterministic_across_processes",
+                "backend::x86_64_sysv::native::pilot::tests::private_pipeline_artifact_and_checkpoints_are_deterministic_across_processes",
                 "--nocapture",
             ])
             .env(CHILD, "1")
